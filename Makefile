@@ -1,36 +1,28 @@
-ifeq ($(origin CXX), default) 
+ifeq ($(origin CXX), default)
 	CXX = g++
 endif
 
-CXXFLAGS ?= -g -no-pie 
+CXXFLAGS ?= -g -O2 -Wall -Wextra
 OUT_O_DIR ?= build
 COMMONINC = -I./include
 SRC = src
-ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 override CXXFLAGS += $(COMMONINC)
 
 CXXSRC = src/main.cpp
-
-CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o)) 
-
+CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o))
 DEPS = $(CXXOBJ:.o=.d)
 
-.PHONY: all
+.PHONY: all clean
+
 all: $(OUT_O_DIR)/out
 
-$(OUT_O_DIR)/out : $(CXXOBJ)
+$(OUT_O_DIR)/out: $(CXXOBJ)
 	$(CXX) $^ -o $@ $(LDFLAGS)
 
-$(CXXOBJ) : $(OUT_O_DIR)/%.o : %.cpp
+$(CXXOBJ): $(OUT_O_DIR)/%.o : %.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
-	@mkdir -p $(@D)
-	$(CXX) -E $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@
-
-
-PHONY: clean
 clean:
 	rm -rf $(OUT_O_DIR)
