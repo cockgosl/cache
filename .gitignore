@@ -1,0 +1,17 @@
+# Build
+build/
+*.o
+*.out
+*.exe
+
+# Compilation database
+compile_commands.json
+
+# Clangd cache
+.cache/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
