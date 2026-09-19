@@ -6,8 +6,13 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <iostream>
-#include <vector>
 #include <algorithm>
+#include <istream>
+
+int cache_start(int argc, char* argv[]);
+int slow_get_page(int key);
+size_t run_simulation(size_t capacity, std::istream& is);
+
 
 // ============================================================================
 // 1. LRU CACHE (Least Recently Used)

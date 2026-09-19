@@ -10,7 +10,7 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 override CXXFLAGS += $(COMMONINC)
 
-CXXSRC = src/main.cpp
+CXXSRC = src/main.cpp src/cache_api.cpp
 
 CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o)) 
 
@@ -30,7 +30,7 @@ $(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
 	@mkdir -p $(@D)
 	$(CXX) -E $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@
 
-
+-include $(DEPS)
 PHONY: clean
 clean:
 	rm -rf $(OUT_O_DIR)
