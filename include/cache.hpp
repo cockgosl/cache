@@ -14,6 +14,7 @@ int slow_get_page(int key);
 size_t run_simulation(size_t capacity, std::istream& is);
 
 
+
 // ============================================================================
 // 1. LRU CACHE (Least Recently Used)
 // ============================================================================
@@ -45,7 +46,7 @@ public:
         }
 
         // CACHE MISS (Промах)
-        slow_get_page(key); // Загрузка страницы из внешней памяти
+        slow_get_page(key); // Загрузка страницы из внешней памяти(её эмуляция, по факту заглушка);
 
         // Если кэш переполнен, вытесняем самый старый элемент из конца списка
         if (cache_.size() == capacity_) {
@@ -156,6 +157,10 @@ public:
             // Если элемент находится в LRU-списке main_, обновляем его свежесть
             if (hit->second.second) {
                 main_.splice(main_.begin(), main_, hit->second.first);
+            }
+            else {
+                main_.splice(main_.begin(), in_, hit->second.first);
+                hit->second.second = true;
             }
             return true;
         }
