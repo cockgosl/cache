@@ -28,9 +28,7 @@ private:
 
 public:
     // Конструктор инициализации емкости
-    explicit lru_cache_t(size_t capacity) : capacity_(capacity) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
     // Метод обращения к странице с обновлением приоритета
     template <typename F>
@@ -81,9 +79,7 @@ private:
     std::unordered_map<size_t, std::list<Node>> freq_map_; // Частота -> Список узлов с этой частотой
 
 public:
-    explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {}
 
     template <typename F>
     bool lookup_update(KeyT key, F slow_get_page) {
@@ -144,9 +140,7 @@ private:
     std::unordered_map<KeyT, std::pair<ListIt, bool>> hash_;
 
 public:
-    explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {}
 
     template <typename F>
     bool lookup_update(KeyT key, F slow_get_page) {
@@ -158,6 +152,7 @@ public:
             if (hit->second.second) {
                 main_.splice(main_.begin(), main_, hit->second.first);
             }
+            // Если элемент в in, просто перемещаем его в LRU и обновляем статус
             else {
                 main_.splice(main_.begin(), in_, hit->second.first);
                 hit->second.second = true;
@@ -215,9 +210,7 @@ private:
     }
 
 public:
-    explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {
-        if (c_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {}
 
     template <typename F>
     bool lookup_update(KeyT key, F slow_get_page) {
@@ -225,10 +218,10 @@ public:
 
         // 1. HIT в основных списках (T1 или T2)
         if (hit != hash_.end() && (hit->second.second == '1' || hit->second.second == '2')) {
-            if (hit->second.second == '1') t1_.erase(hit->second.first);
-            else t2_.erase(hit->second.first);
+            if (hit->second.second == '1') t2_.splice(t2_.begin(), t1_, hit->second.first);
+            else t2_.splice(t2_.begin(), t2_, hit->second.first);
 
-            t2_.push_front(key); // Переводим элемент в список частых T2
+            // Переводим элемент в список частых T2
             hash_[key] = {t2_.begin(), '2'};
             return true;
         }
@@ -237,7 +230,7 @@ public:
 
         // 2. HIT в истории B1 (адаптируем p_ в сторону увеличение размера T1)
         if (hit != hash_.end() && hit->second.second == 'a') {
-            p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / std::max<size_t>(1, b1_.size())));
+            p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / b1_.size()));
             replace(key);
             b1_.erase(hit->second.first);
             t2_.push_front(key);
@@ -247,8 +240,14 @@ public:
 
         // 3. HIT в истории B2 (адаптируем p_ в сторону увеличения размера T2)
         if (hit != hash_.end() && hit->second.second == 'b') {
-            size_t delta = b1_.size() / std::max<size_t>(1, b2_.size());
-            p_ = (p_ > (delta > 0 ? delta : 1)) ? p_ - (delta > 0 ? delta : 1) : 0;
+            size_t delta = b1_.size() / b2_.size();
+            size_t d = delta > 0 ? delta : 1;
+            if (p_ > d) {
+                p_ = p_ - d;
+            }
+            else {
+                p_ = 0;
+            }
             replace(key);
             b2_.erase(hit->second.first);
             t2_.push_front(key);
@@ -315,9 +314,7 @@ private:
     }
 
 public:
-    explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {}
 
     template <typename F>
     bool lookup_update(KeyT key, F slow_get_page) {
@@ -327,14 +324,17 @@ public:
         if (hit != hash_.end() && hit->second.status != HIR_NON_RES) {
             BlockInfo& info = hit->second;
             if (info.status == LIR) {
-                S_.erase(info.stack_it);
-                S_.push_front(key);
-                info.stack_it = S_.begin();
+                S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
-            } else if (info.status == HIR_RES) {
-                S_.push_front(key);
+            } 
+            else if (info.status == HIR_RES) {
                 bool was_in_stack = info.in_stack;
-                if (was_in_stack) S_.erase(info.stack_it);
+                if (was_in_stack) {
+                    S_.splice(S_.begin(), S_, info.stack_it);
+                } 
+                else {
+                    S_.push_front(key);
+                }
                 info.stack_it = S_.begin();
                 info.in_stack = true;
 

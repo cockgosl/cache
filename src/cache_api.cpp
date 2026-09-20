@@ -38,14 +38,17 @@ int cache_start(int argc, char* argv[]) {
         }
 
         std::string cache_type;
-        size_t capacity = 0;
+        int capacity = 0;
 
         // Ввод из файла: <тип_кэша> <емкость>
         if (!(file >> cache_type >> capacity)) {
             std::cerr << "Ошибка: Некорректный формат заглавных данных в файле\n";
             return 1;
         }
-
+        if (capacity <= 0 ) {
+            std::cerr << "Ошибка: capacity должна быть > 0\n";
+            return 1;
+        }
         size_t hits = 0;
 
         if (cache_type == "lru") {
