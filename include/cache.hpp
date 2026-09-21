@@ -1,19 +1,33 @@
 #ifndef CACHE_HPP
 #define CACHE_HPP
 
+#include <utility>
 #include <cstddef>
 #include <list>
 #include <unordered_map>
-#include <stdexcept>
 #include <iostream>
-#include <vector>
 #include <algorithm>
+#include <istream>
+
+int cache_start(int argc, char* argv[]);
+size_t run_simulation(size_t capacity, std::istream& is);
+int slow_get_page(int key); 
+
+template <typename KeyT>
+class cache_interface {
+public:
+    virtual ~cache_interface() = default;
+
+    virtual bool lookup(KeyT key) = 0;
+    virtual KeyT insert(KeyT key) = 0;
+    virtual void erase(KeyT key) = 0;
+};
 
 // ============================================================================
 // 1. LRU CACHE (Least Recently Used)
 // ============================================================================
 template <typename KeyT = int>
-class lru_cache_t {
+class lru_cache_t : public cache_interface<KeyT> {
 private:
     size_t capacity_;                          // Максимальная емкость кэша
     std::list<KeyT> cache_;                    // Двусвязный список (порядок использования)
@@ -22,36 +36,42 @@ private:
 
 public:
     // Конструктор инициализации емкости
-    explicit lru_cache_t(size_t capacity) : capacity_(capacity) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
-    // Метод обращения к странице с обновлением приоритета
-    template <typename F>
-    bool lookup_update(KeyT key, F slow_get_page) {
-        // Поиск ключа в хэш-таблице за O(1)
-        auto hit = hash_.find(key);
 
-        // CACHE HIT (Попадание)
-        if (hit != hash_.end()) {
-            // Перемещаем элемент в начало списка (самый свежий)
-            cache_.splice(cache_.begin(), cache_, hit->second);
-            return true;
+    bool lookup(KeyT key) override {
+        auto it = hash_.find(key);
+
+        if (it == hash_.end()) {
+            return false;
         }
 
-        // CACHE MISS (Промах)
-        slow_get_page(key); // Загрузка страницы из внешней памяти
-
-        // Если кэш переполнен, вытесняем самый старый элемент из конца списка
+        cache_.splice(cache_.begin(), cache_, it->second);
+        return true;
+    }
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
+        // Если кеш заполнен — удаляем самый старый элемент
         if (cache_.size() == capacity_) {
+            victim = cache_.back();
             hash_.erase(cache_.back());
             cache_.pop_back();
         }
 
-        // Вставляем новый элемент в начало списка и сохраняем итератор в хэш-таблице
+        // Добавляем новый элемент в начало
         cache_.push_front(key);
+
+        // Запоминаем его итератор в hash_
         hash_[key] = cache_.begin();
-        return false;
+        return victim;
+    }
+    void erase(KeyT key) {
+        auto it = hash_.find(key);
+        if (it == hash_.end()) {
+            return;
+        }
+        cache_.erase(it->second);
+        hash_.erase(it);
     }
 };
 
@@ -59,7 +79,7 @@ public:
 // 2. LFU CACHE (Least Frequently Used) - O(1)
 // ============================================================================
 template <typename KeyT = int>
-class lfu_cache_t {
+class lfu_cache_t : public cache_interface<KeyT> {
 private:
     size_t capacity_;  // Емкость кэша
     size_t min_freq_;  // Минимальная текущая частота элементов
@@ -75,12 +95,9 @@ private:
     std::unordered_map<size_t, std::list<Node>> freq_map_; // Частота -> Список узлов с этой частотой
 
 public:
-    explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
+    explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {}
 
-    template <typename F>
-    bool lookup_update(KeyT key, F slow_get_page) {
+    bool lookup(KeyT key) override {
         auto hit = key_map_.find(key);
 
         // CACHE HIT
@@ -100,24 +117,52 @@ public:
             key_map_[key] = freq_map_[freq + 1].begin();
             return true;
         }
-
-        // CACHE MISS
-        slow_get_page(key);
-
+        else {
+            return false;
+        }
+    }
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
         // При переполнении вытесняем элемент из группы с минимальной частотой min_freq_
         if (key_map_.size() == capacity_) {
             auto& min_list = freq_map_[min_freq_];
-            KeyT evict_key = min_list.back().key;
+            victim = min_list.back().key;
             min_list.pop_back();
-            if (min_list.empty()) freq_map_.erase(min_freq_);
-            key_map_.erase(evict_key);
+            if (min_list.empty()) {
+                freq_map_.erase(min_freq_);
+            }
+            key_map_.erase(victim);
         }
 
         // Вставляем новый элемент с частотой 1
         min_freq_ = 1;
         freq_map_[1].push_front({key, 1});
         key_map_[key] = freq_map_[1].begin();
-        return false;
+        return victim;
+    }
+    void erase(KeyT key) override {
+        auto it = key_map_.find(key);
+        if (it == key_map_.end()) {
+            return;
+        }
+        auto node_it = it->second;
+        size_t freq = node_it->freq;
+
+        freq_map_[freq].erase(node_it);
+        if (freq_map_[freq].empty()) {
+            freq_map_.erase(freq);
+        } 
+        key_map_.erase(it);
+        if (key_map_.empty()) {
+            min_freq_ = 0;
+        }
+        else if (freq == min_freq_ && freq_map_.find(freq) == freq_map_.end()) {
+            min_freq_ = 0;
+            for (const auto& pair : freq_map_) {
+                if (min_freq_ == 0 || pair.first < min_freq_)
+                    min_freq_ = pair.first;
+            }
+        }
     }
 };
 
@@ -125,7 +170,7 @@ public:
 // 3. 2Q CACHE (Two Queues Algorithm)
 // ============================================================================
 template <typename KeyT = int>
-class two_q_cache_t {
+class two_q_cache_t : public cache_interface<KeyT>{
 private:
     size_t capacity_; // Емкость
     size_t kin_;      // Лимит размера FIFO-очереди
@@ -138,12 +183,8 @@ private:
     std::unordered_map<KeyT, std::pair<ListIt, bool>> hash_;
 
 public:
-    explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
-
-    template <typename F>
-    bool lookup_update(KeyT key, F slow_get_page) {
+    explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {}
+    bool lookup(KeyT key) override{
         auto hit = hash_.find(key);
 
         // CACHE HIT
@@ -152,19 +193,28 @@ public:
             if (hit->second.second) {
                 main_.splice(main_.begin(), main_, hit->second.first);
             }
+            // Если элемент в in, просто перемещаем его в LRU и обновляем статус
+            else {
+                main_.splice(main_.begin(), in_, hit->second.first);
+                hit->second.second = true;
+            }
             return true;
         }
-
-        // CACHE MISS
-        slow_get_page(key);
-
+        else {
+            return false;
+        }
+    }
+    KeyT insert(KeyT key) override{
+        KeyT victim = -1;
         // Если кэш заполнен: вытесняем из in_, либо из main_
         if (hash_.size() == capacity_) {
             if (in_.size() >= kin_ || main_.empty()) {
                 hash_.erase(in_.back());
+                victim = in_.back();
                 in_.pop_back();
             } else {
                 hash_.erase(main_.back());
+                victim = main_.back();
                 main_.pop_back();
             }
         }
@@ -172,7 +222,24 @@ public:
         // Новые элементы добавляем в FIFO-очередь in_
         in_.push_front(key);
         hash_[key] = {in_.begin(), false};
-        return false;
+        return victim;
+    }
+    void erase(KeyT key) override {
+       auto it = hash_.find(key);
+
+       if (it == hash_.end())
+           return;
+
+       if (it->second.second) {
+           // Ключ находится в main_
+           main_.erase(it->second.first);
+       }
+       else {
+           // Ключ находится в in_
+           in_.erase(it->second.first);
+       }
+
+       hash_.erase(it);
     }
 };
 
@@ -180,7 +247,7 @@ public:
 // 4. ARC CACHE (Adaptive Replacement Cache)
 // ============================================================================
 template <typename KeyT = int>
-class arc_cache_t {
+class arc_cache_t : public cache_interface<KeyT> {
 private:
     size_t c_; // Емкость
     size_t p_; // Динамический параметр разделения ресурсов
@@ -190,66 +257,77 @@ private:
     std::unordered_map<KeyT, std::pair<ListIt, char>> hash_; // '1':t1, '2':t2, 'a':b1, 'b':b2
 
     // Вспомогательный метод вытеснения
-    void replace(KeyT key) {
+    KeyT replace(KeyT key) {
+        KeyT old;
         if (!t1_.empty() && (t1_.size() > p_ || (hash_.count(key) && hash_[key].second == 'b' && t1_.size() == p_))) {
-            KeyT old = t1_.back();
+            old = t1_.back();
             t1_.pop_back();
             b1_.push_front(old);
             hash_[old] = {b1_.begin(), 'a'};
         } else {
-            KeyT old = t2_.back();
+            old = t2_.back();
             t2_.pop_back();
             b2_.push_front(old);
             hash_[old] = {b2_.begin(), 'b'};
         }
+        return old;
     }
 
 public:
-    explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {
-        if (c_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
-
-    template <typename F>
-    bool lookup_update(KeyT key, F slow_get_page) {
+    explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {}
+    bool lookup(KeyT key) override {
         auto hit = hash_.find(key);
 
         // 1. HIT в основных списках (T1 или T2)
         if (hit != hash_.end() && (hit->second.second == '1' || hit->second.second == '2')) {
-            if (hit->second.second == '1') t1_.erase(hit->second.first);
-            else t2_.erase(hit->second.first);
+            if (hit->second.second == '1') t2_.splice(t2_.begin(), t1_, hit->second.first);
+            else t2_.splice(t2_.begin(), t2_, hit->second.first);
 
-            t2_.push_front(key); // Переводим элемент в список частых T2
+            // Переводим элемент в список частых T2
             hash_[key] = {t2_.begin(), '2'};
             return true;
         }
+        else {
+            return false;
+        }
 
-        slow_get_page(key);
-
+    }
+    KeyT insert(KeyT key) override{
+        KeyT victim = -1;
+        auto hit = hash_.find(key);
         // 2. HIT в истории B1 (адаптируем p_ в сторону увеличение размера T1)
         if (hit != hash_.end() && hit->second.second == 'a') {
-            p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / std::max<size_t>(1, b1_.size())));
-            replace(key);
+            p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / b1_.size()));
+            victim = replace(key);
             b1_.erase(hit->second.first);
             t2_.push_front(key);
             hash_[key] = {t2_.begin(), '2'};
-            return false;
+            return victim;
         }
 
         // 3. HIT в истории B2 (адаптируем p_ в сторону увеличения размера T2)
         if (hit != hash_.end() && hit->second.second == 'b') {
-            size_t delta = b1_.size() / std::max<size_t>(1, b2_.size());
-            p_ = (p_ > (delta > 0 ? delta : 1)) ? p_ - (delta > 0 ? delta : 1) : 0;
-            replace(key);
+            size_t delta = b1_.size() / b2_.size();
+            size_t d = delta > 0 ? delta : 1;
+            if (p_ > d) {
+                p_ = p_ - d;
+            }
+            else {
+                p_ = 0;
+            }
+            victim = replace(key);
             b2_.erase(hit->second.first);
             t2_.push_front(key);
             hash_[key] = {t2_.begin(), '2'};
-            return false;
+            return victim;
         }
 
         // 4. Полный MISS
         if (t1_.size() + b1_.size() == c_) {
             if (t1_.size() < c_) {
-                hash_.erase(b1_.back()); b1_.pop_back(); replace(key);
+                hash_.erase(b1_.back()); 
+                b1_.pop_back(); 
+                victim = replace(key);
             } else {
                 hash_.erase(t1_.back()); t1_.pop_back();
             }
@@ -257,13 +335,28 @@ public:
             size_t total = t1_.size() + t2_.size() + b1_.size() + b2_.size();
             if (total >= c_) {
                 if (total == 2 * c_) { hash_.erase(b2_.back()); b2_.pop_back(); }
-                replace(key);
+                victim = replace(key);
             }
         }
 
         t1_.push_front(key);
         hash_[key] = {t1_.begin(), '1'};
-        return false;
+        return victim;
+    }
+    void erase(KeyT key) override {
+        auto it = hash_.find(key);
+
+        if (it == hash_.end())
+            return;
+
+        if (it->second.second == '1') {
+            t1_.erase(it->second.first);
+            hash_.erase(it);
+        }
+        else if (it->second.second == '2') {
+            t2_.erase(it->second.first);
+            hash_.erase(it);
+        }
     }
 };
 
@@ -271,7 +364,7 @@ public:
 // 5. LIRS CACHE (Low Inter-reference Recency Set)
 // ============================================================================
 template <typename KeyT = int>
-class lirs_cache_t {
+class lirs_cache_t : public cache_interface<KeyT> {
 private:
     size_t capacity_;
     size_t lir_cap_;
@@ -305,26 +398,25 @@ private:
     }
 
 public:
-    explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {
-        if (capacity_ == 0) throw std::invalid_argument("Capacity must be > 0");
-    }
-
-    template <typename F>
-    bool lookup_update(KeyT key, F slow_get_page) {
+    explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {}
+    bool lookup(KeyT key) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
         if (hit != hash_.end() && hit->second.status != HIR_NON_RES) {
             BlockInfo& info = hit->second;
             if (info.status == LIR) {
-                S_.erase(info.stack_it);
-                S_.push_front(key);
-                info.stack_it = S_.begin();
+                S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
-            } else if (info.status == HIR_RES) {
-                S_.push_front(key);
+            } 
+            else if (info.status == HIR_RES) {
                 bool was_in_stack = info.in_stack;
-                if (was_in_stack) S_.erase(info.stack_it);
+                if (was_in_stack) {
+                    S_.splice(S_.begin(), S_, info.stack_it);
+                } 
+                else {
+                    S_.push_front(key);
+                }
                 info.stack_it = S_.begin();
                 info.in_stack = true;
 
@@ -345,35 +437,132 @@ public:
             }
             return true;
         }
+        else {
+            return false;
+        }
 
-        // CACHE MISS
-        slow_get_page(key);
+    }
 
-        // Вытеснение при переполнении
-        if (lir_count_ >= lir_cap_ && hash_.size() >= capacity_) {
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
+        auto hit = hash_.find(key);
+
+
+        // Если физический кеш заполнен,
+        // вытесняем самый старый HIR_RES
+        if (lir_count_ + Q_.size() >= capacity_) {
             if (!Q_.empty()) {
-                KeyT victim = Q_.back();
+                victim = Q_.back();
                 Q_.pop_back();
+
                 hash_[victim].status = HIR_NON_RES;
             }
         }
 
-        // Добавление нового элемента
+
+        // HIR_NON_RES:
+        // ключ известен LIRS, но физически отсутствует в кеше
+        if (hit != hash_.end() && hit->second.status == HIR_NON_RES) {
+
+            BlockInfo& info = hit->second;
+
+            bool was_in_stack = info.in_stack;
+            // Элемент всё ещё находится в стеке S
+            if (was_in_stack) {
+                S_.splice(S_.begin(), S_, info.stack_it);
+
+                info.stack_it = S_.begin();
+                info.status = LIR;
+
+                // Количество LIR не меняется:
+                // старый LIR станет HIR_RES
+                prune_stack();
+
+                KeyT bottom_lir = S_.back();
+
+                hash_[bottom_lir].status = HIR_RES;
+
+                Q_.push_front(bottom_lir);
+                hash_[bottom_lir].q_it = Q_.begin();
+            }
+
+            // Элемент уже был удалён из стека S
+            else {
+                S_.push_front(key);
+
+                info.stack_it = S_.begin();
+                info.in_stack = true;
+
+                info.status = HIR_RES;
+
+                Q_.push_front(key);
+                info.q_it = Q_.begin();
+            }
+
+            return victim;
+        }
+
+        // ------------------------------------------------
+        // НОВЫЙ КЛЮЧ
+        // ------------------------------------------------
+
+       
+
         BlockInfo info;
+
+        // Есть место среди LIR
         if (lir_count_ < lir_cap_) {
             info.status = LIR;
-            lir_count_++;
-        } else {
+            ++lir_count_;
+        }
+
+        // LIR уже заполнены → новый элемент HIR_RES
+        else {
             info.status = HIR_RES;
+
             Q_.push_front(key);
             info.q_it = Q_.begin();
         }
+
+        // Добавляем элемент в стек S
         S_.push_front(key);
+
         info.stack_it = S_.begin();
         info.in_stack = true;
+
         hash_[key] = info;
 
-        return false;
+        return victim;
+    } 
+    void erase(KeyT key) override {
+        auto it = hash_.find(key);
+
+        if (it == hash_.end())
+            return;
+
+        BlockInfo& info = it->second;
+
+        // HIR_NON_RES физически уже не находится в кеше.
+        if (info.status == HIR_NON_RES)
+            return;
+
+        // Удаляем из S_
+        if (info.in_stack) {
+            S_.erase(info.stack_it);
+            info.in_stack = false;
+        }
+
+        // HIR_RES дополнительно находится в Q_
+        if (info.status == HIR_RES) {
+            Q_.erase(info.q_it);
+        }
+
+        // Если удаляем LIR, уменьшаем количество LIR
+        if (info.status == LIR) {
+            --lir_count_;
+        }
+
+        hash_.erase(it);
     }
 };
 
