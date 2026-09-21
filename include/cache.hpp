@@ -11,6 +11,7 @@
 
 int cache_start(int argc, char* argv[]);
 size_t run_simulation(size_t capacity, std::istream& is);
+int slow_get_page(int key); 
 
 template <typename KeyT>
 class cache_interface {
@@ -18,7 +19,8 @@ public:
     virtual ~cache_interface() = default;
 
     virtual bool lookup(KeyT key) = 0;
-    virtual void insert(KeyT key) = 0;
+    virtual KeyT insert(KeyT key) = 0;
+    virtual void erase(KeyT key) = 0;
 };
 
 // ============================================================================
@@ -47,9 +49,11 @@ public:
         cache_.splice(cache_.begin(), cache_, it->second);
         return true;
     }
-    void insert(KeyT key) override {
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
         // Если кеш заполнен — удаляем самый старый элемент
         if (cache_.size() == capacity_) {
+            victim = cache_.back();
             hash_.erase(cache_.back());
             cache_.pop_back();
         }
@@ -59,6 +63,15 @@ public:
 
         // Запоминаем его итератор в hash_
         hash_[key] = cache_.begin();
+        return victim;
+    }
+    void erase(KeyT key) {
+        auto it = hash_.find(key);
+        if (it == hash_.end()) {
+            return;
+        }
+        cache_.erase(it->second);
+        hash_.erase(it);
     }
 };
 
@@ -108,20 +121,48 @@ public:
             return false;
         }
     }
-    void insert(KeyT key) override {
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
         // При переполнении вытесняем элемент из группы с минимальной частотой min_freq_
         if (key_map_.size() == capacity_) {
             auto& min_list = freq_map_[min_freq_];
-            KeyT evict_key = min_list.back().key;
+            victim = min_list.back().key;
             min_list.pop_back();
-            if (min_list.empty()) freq_map_.erase(min_freq_);
-            key_map_.erase(evict_key);
+            if (min_list.empty()) {
+                freq_map_.erase(min_freq_);
+            }
+            key_map_.erase(victim);
         }
 
         // Вставляем новый элемент с частотой 1
         min_freq_ = 1;
         freq_map_[1].push_front({key, 1});
         key_map_[key] = freq_map_[1].begin();
+        return victim;
+    }
+    void erase(KeyT key) override {
+        auto it = key_map_.find(key);
+        if (it == key_map_.end()) {
+            return;
+        }
+        auto node_it = it->second;
+        size_t freq = node_it->freq;
+
+        freq_map_[freq].erase(node_it);
+        if (freq_map_[freq].empty()) {
+            freq_map_.erase(freq);
+        } 
+        key_map_.erase(it);
+        if (key_map_.empty()) {
+            min_freq_ = 0;
+        }
+        else if (freq == min_freq_ && freq_map_.find(freq) == freq_map_.end()) {
+            min_freq_ = 0;
+            for (const auto& pair : freq_map_) {
+                if (min_freq_ == 0 || pair.first < min_freq_)
+                    min_freq_ = pair.first;
+            }
+        }
     }
 };
 
@@ -163,15 +204,17 @@ public:
             return false;
         }
     }
-    void insert(KeyT key) override{
-
+    KeyT insert(KeyT key) override{
+        KeyT victim = -1;
         // Если кэш заполнен: вытесняем из in_, либо из main_
         if (hash_.size() == capacity_) {
             if (in_.size() >= kin_ || main_.empty()) {
                 hash_.erase(in_.back());
+                victim = in_.back();
                 in_.pop_back();
             } else {
                 hash_.erase(main_.back());
+                victim = main_.back();
                 main_.pop_back();
             }
         }
@@ -179,6 +222,24 @@ public:
         // Новые элементы добавляем в FIFO-очередь in_
         in_.push_front(key);
         hash_[key] = {in_.begin(), false};
+        return victim;
+    }
+    void erase(KeyT key) override {
+       auto it = hash_.find(key);
+
+       if (it == hash_.end())
+           return;
+
+       if (it->second.second) {
+           // Ключ находится в main_
+           main_.erase(it->second.first);
+       }
+       else {
+           // Ключ находится в in_
+           in_.erase(it->second.first);
+       }
+
+       hash_.erase(it);
     }
 };
 
@@ -196,18 +257,20 @@ private:
     std::unordered_map<KeyT, std::pair<ListIt, char>> hash_; // '1':t1, '2':t2, 'a':b1, 'b':b2
 
     // Вспомогательный метод вытеснения
-    void replace(KeyT key) {
+    KeyT replace(KeyT key) {
+        KeyT old;
         if (!t1_.empty() && (t1_.size() > p_ || (hash_.count(key) && hash_[key].second == 'b' && t1_.size() == p_))) {
-            KeyT old = t1_.back();
+            old = t1_.back();
             t1_.pop_back();
             b1_.push_front(old);
             hash_[old] = {b1_.begin(), 'a'};
         } else {
-            KeyT old = t2_.back();
+            old = t2_.back();
             t2_.pop_back();
             b2_.push_front(old);
             hash_[old] = {b2_.begin(), 'b'};
         }
+        return old;
     }
 
 public:
@@ -229,16 +292,17 @@ public:
         }
 
     }
-    void insert(KeyT key) override{
+    KeyT insert(KeyT key) override{
+        KeyT victim = -1;
         auto hit = hash_.find(key);
         // 2. HIT в истории B1 (адаптируем p_ в сторону увеличение размера T1)
         if (hit != hash_.end() && hit->second.second == 'a') {
             p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / b1_.size()));
-            replace(key);
+            victim = replace(key);
             b1_.erase(hit->second.first);
             t2_.push_front(key);
             hash_[key] = {t2_.begin(), '2'};
-            return;
+            return victim;
         }
 
         // 3. HIT в истории B2 (адаптируем p_ в сторону увеличения размера T2)
@@ -251,17 +315,19 @@ public:
             else {
                 p_ = 0;
             }
-            replace(key);
+            victim = replace(key);
             b2_.erase(hit->second.first);
             t2_.push_front(key);
             hash_[key] = {t2_.begin(), '2'};
-            return;
+            return victim;
         }
 
         // 4. Полный MISS
         if (t1_.size() + b1_.size() == c_) {
             if (t1_.size() < c_) {
-                hash_.erase(b1_.back()); b1_.pop_back(); replace(key);
+                hash_.erase(b1_.back()); 
+                b1_.pop_back(); 
+                victim = replace(key);
             } else {
                 hash_.erase(t1_.back()); t1_.pop_back();
             }
@@ -269,13 +335,28 @@ public:
             size_t total = t1_.size() + t2_.size() + b1_.size() + b2_.size();
             if (total >= c_) {
                 if (total == 2 * c_) { hash_.erase(b2_.back()); b2_.pop_back(); }
-                replace(key);
+                victim = replace(key);
             }
         }
 
         t1_.push_front(key);
         hash_[key] = {t1_.begin(), '1'};
+        return victim;
+    }
+    void erase(KeyT key) override {
+        auto it = hash_.find(key);
 
+        if (it == hash_.end())
+            return;
+
+        if (it->second.second == '1') {
+            t1_.erase(it->second.first);
+            hash_.erase(it);
+        }
+        else if (it->second.second == '2') {
+            t2_.erase(it->second.first);
+            hash_.erase(it);
+        }
     }
 };
 
@@ -362,8 +443,22 @@ public:
 
     }
 
-    void insert(KeyT key) override {
+    KeyT insert(KeyT key) override {
+        KeyT victim = -1;
         auto hit = hash_.find(key);
+
+
+        // Если физический кеш заполнен,
+        // вытесняем самый старый HIR_RES
+        if (lir_count_ + Q_.size() >= capacity_) {
+            if (!Q_.empty()) {
+                victim = Q_.back();
+                Q_.pop_back();
+
+                hash_[victim].status = HIR_NON_RES;
+            }
+        }
+
 
         // HIR_NON_RES:
         // ключ известен LIRS, но физически отсутствует в кеше
@@ -372,14 +467,6 @@ public:
             BlockInfo& info = hit->second;
 
             bool was_in_stack = info.in_stack;
-            // Если кеш заполнен — освобождаем место
-            if (lir_count_ + Q_.size() >= capacity_ && !Q_.empty()) {
-        
-                KeyT victim = Q_.back();
-                Q_.pop_back();
-        
-                hash_[victim].status = HIR_NON_RES;
-            }
             // Элемент всё ещё находится в стеке S
             if (was_in_stack) {
                 S_.splice(S_.begin(), S_, info.stack_it);
@@ -412,23 +499,14 @@ public:
                 info.q_it = Q_.begin();
             }
 
-            return;
+            return victim;
         }
 
         // ------------------------------------------------
         // НОВЫЙ КЛЮЧ
         // ------------------------------------------------
 
-        // Если физический кеш заполнен,
-        // вытесняем самый старый HIR_RES
-        if (lir_count_ + Q_.size() >= capacity_) {
-            if (!Q_.empty()) {
-                KeyT victim = Q_.back();
-                Q_.pop_back();
-
-                hash_[victim].status = HIR_NON_RES;
-            }
-        }
+       
 
         BlockInfo info;
 
@@ -453,7 +531,39 @@ public:
         info.in_stack = true;
 
         hash_[key] = info;
+
+        return victim;
     } 
+    void erase(KeyT key) override {
+        auto it = hash_.find(key);
+
+        if (it == hash_.end())
+            return;
+
+        BlockInfo& info = it->second;
+
+        // HIR_NON_RES физически уже не находится в кеше.
+        if (info.status == HIR_NON_RES)
+            return;
+
+        // Удаляем из S_
+        if (info.in_stack) {
+            S_.erase(info.stack_it);
+            info.in_stack = false;
+        }
+
+        // HIR_RES дополнительно находится в Q_
+        if (info.status == HIR_RES) {
+            Q_.erase(info.q_it);
+        }
+
+        // Если удаляем LIR, уменьшаем количество LIR
+        if (info.status == LIR) {
+            --lir_count_;
+        }
+
+        hash_.erase(it);
+    }
 };
 
 #endif // CACHE_HPP

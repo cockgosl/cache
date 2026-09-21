@@ -2,6 +2,10 @@
 #include "cache_api.hpp"
 #include <fstream>
 
+int slow_get_page(int key) {
+    return (key);
+}
+
 void run_simulation(multi_cache_t<int>& cache, std::istream& is) {
     int page_key = 0;
 
