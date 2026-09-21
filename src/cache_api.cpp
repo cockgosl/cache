@@ -1,80 +1,83 @@
-#include <cache.hpp>
+#include "cache.hpp"
+#include "cache_api.hpp"
 #include <fstream>
 
-int slow_get_page(int key) {
-    return key;
-}
-
-template <typename CacheT>
-size_t run_simulation(size_t capacity, std::istream& is) {
-    CacheT cache(capacity);
-    size_t hits = 0;
+void run_simulation(multi_cache_t<int>& cache, std::istream& is) {
     int page_key = 0;
 
-    // Считываем числа из файла
     while (is >> page_key) {
-        if (cache.lookup_update(page_key, slow_get_page)) {
-            hits++;
-        }
+        cache.request(page_key);
     }
 
-    // Проверяем, что файл прочитан до конца без ошибок формата
     if (!is.eof() && is.fail()) {
         std::cerr << "Ошибка: встречен некорректный символ во входном файле.\n";
         exit(1);
     }
-
-    return hits;
 }
+
 int cache_start(int argc, char* argv[]) {
-     try {
-        // Указываем путь к файлу (по умолчанию "input.txt" или из аргументов командной строки)
+    try {
         std::string filename = (argc > 1) ? argv[1] : "txt/input.txt";
 
         std::ifstream file(filename);
+
         if (!file.is_open()) {
-            std::cerr << "Ошибка: Не удалось открыть файл '" << filename << "'\n";
+            std::cerr << "Ошибка: Не удалось открыть файл " << filename << "'\n";
             return 1;
         }
 
-        std::string cache_type;
-        int capacity = 0;
+        size_t cache_count;
 
-        // Ввод из файла: <тип_кэша> <емкость>
-        if (!(file >> cache_type >> capacity)) {
-            std::cerr << "Ошибка: Некорректный формат заглавных данных в файле\n";
-            return 1;
-        }
-        if (capacity <= 0 ) {
-            std::cerr << "Ошибка: capacity должна быть > 0\n";
-            return 1;
-        }
-        size_t hits = 0;
-
-        if (cache_type == "lru") {
-            hits = run_simulation<lru_cache_t<int>>(capacity, file);
-        } else if (cache_type == "2q") {
-            hits = run_simulation<two_q_cache_t<int>>(capacity, file);
-        } else if (cache_type == "lfu") {
-            hits = run_simulation<lfu_cache_t<int>>(capacity, file);
-        } else if (cache_type == "lirs") {
-            hits = run_simulation<lirs_cache_t<int>>(capacity, file);
-        } else if (cache_type == "arc") {
-            hits = run_simulation<arc_cache_t<int>>(capacity, file);
-        } else {
-            // При неправильном типе алгоритма останавливаем программу
-            std::cerr << "Ошибка: Неизвестный тип алгоритма кэширования '" << cache_type
-                      << "'. Допустимые значения: lru, 2q, lfu, lirs, arc.\n";
+        if (!(file >> cache_count)) {
+            std::cerr << "Ошибка: не указано количество кешей\n";
             return 1;
         }
 
-        std::cout << "Hits: " << hits << "\n";
+        multi_cache_t<int> cache;
+
+        for (size_t i = 0; i < cache_count; ++i) {
+            std::string cache_type;
+            int capacity;
+
+            if (!(file >> cache_type >> capacity)) {
+                std::cerr << "Ошибка: некорректная конфигурация кеша\n";
+                return 1;
+            }
+
+            if (capacity <= 0) {
+                std::cerr << "Ошибка: capacity должна быть > 0\n";
+                return 1;
+            }
+
+            if (cache_type == "lru") {
+                cache.add_cache<lru_cache_t<int>>(capacity);
+            }
+            else if (cache_type == "2q") {
+                cache.add_cache<two_q_cache_t<int>>(capacity);
+            }
+            else if (cache_type == "lfu") {
+                cache.add_cache<lfu_cache_t<int>>(capacity);
+            }
+            else if (cache_type == "lirs") {
+                cache.add_cache<lirs_cache_t<int>>(capacity);
+            }
+            else if (cache_type == "arc") {
+                cache.add_cache<arc_cache_t<int>>(capacity);
+            }
+            else {
+                std::cerr << "Ошибка: неизвестный тип кеша '"
+                          << cache_type << "'\n";
+                return 1;
+            }
+        }
+
+        run_simulation(cache, file);
+        cache.print_stats(); 
+
+        return 0;
     }
     catch (const std::exception& e) {
         std::cerr << "Исключение: " << e.what() << "\n";
         return 1;
     }
-
-    return 0;
 }
-
