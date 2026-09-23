@@ -11,7 +11,7 @@
 
 int cache_start(int argc, char* argv[]);
 size_t run_simulation(size_t capacity, std::istream& is);
-int slow_get_page(int key); 
+int slow_get_page(int key);
 
 template <typename KeyT>
 class cache_interface {
@@ -65,7 +65,7 @@ public:
         hash_[key] = cache_.begin();
         return victim;
     }
-    void erase(KeyT key) {
+    void erase(KeyT key) override{
         auto it = hash_.find(key);
         if (it == hash_.end()) {
             return;
@@ -151,7 +151,7 @@ public:
         freq_map_[freq].erase(node_it);
         if (freq_map_[freq].empty()) {
             freq_map_.erase(freq);
-        } 
+        }
         key_map_.erase(it);
         if (key_map_.empty()) {
             min_freq_ = 0;
@@ -325,8 +325,8 @@ public:
         // 4. Полный MISS
         if (t1_.size() + b1_.size() == c_) {
             if (t1_.size() < c_) {
-                hash_.erase(b1_.back()); 
-                b1_.pop_back(); 
+                hash_.erase(b1_.back());
+                b1_.pop_back();
                 victim = replace(key);
             } else {
                 hash_.erase(t1_.back()); t1_.pop_back();
@@ -408,12 +408,12 @@ public:
             if (info.status == LIR) {
                 S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
-            } 
+            }
             else if (info.status == HIR_RES) {
                 bool was_in_stack = info.in_stack;
                 if (was_in_stack) {
                     S_.splice(S_.begin(), S_, info.stack_it);
-                } 
+                }
                 else {
                     S_.push_front(key);
                 }
@@ -506,7 +506,7 @@ public:
         // НОВЫЙ КЛЮЧ
         // ------------------------------------------------
 
-       
+
 
         BlockInfo info;
 
@@ -533,7 +533,7 @@ public:
         hash_[key] = info;
 
         return victim;
-    } 
+    }
     void erase(KeyT key) override {
         auto it = hash_.find(key);
 
