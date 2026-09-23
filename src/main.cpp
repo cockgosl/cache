@@ -9,13 +9,13 @@
 #include "cache.hpp"
 
 struct BenchmarkResult {
-    std::string cache_type;
-    size_t capacity;
-    size_t total_requests;
-    size_t hits;
-    size_t misses;
-    double hit_rate;
-    double duration_ms;
+    std::string cache_type;   // Название кеша (например, "LRU Cache")
+    size_t capacity;          // Ёмкость кеша (максимальное количество элементов)
+    size_t total_requests;    // Всего запросов
+    size_t hits;              // Количество попаданий (Hit)
+    size_t misses;            // Количество промахов (Miss)
+    double hit_rate;          // Эффективность в процентах (Hits / Total * 100%)
+    double duration_ms;       // Время выполнения теста в миллисекундах
 };
 
 // Генерация последовательности запросов (Zipfian / Hotspot: 80% запросов к 20% элементов)
@@ -43,12 +43,14 @@ BenchmarkResult run_benchmark(const std::string& name, size_t capacity, const st
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int key : workload) {
-        if (cache.lookup(key)) {
-            hits++;
-        } else {
-            misses++;
-        }
+    if (cache.lookup(key)) {
+        hits++;
+    } else {
+        misses++;
+        slow_get_page(key);
+        cache.insert(key);
     }
+}
 
     auto end = std::chrono::high_resolution_clock::now();
     double duration = std::chrono::duration<double, std::milli>(end - start).count();
