@@ -7,22 +7,24 @@
 #include <cstddef>
 #include <iostream>
 
-template <typename KeyT = int>
+
+
+template <typename KeyT = int, typename ValueT = int>
 class multi_cache_t {
 private:
-    std::vector< std::unique_ptr<cache_interface<KeyT>> > caches_;
+    std::vector< std::unique_ptr<cache_interface<KeyT, ValueT>> > caches_;
 
     std::vector<size_t> hits_;
     std::vector<size_t> misses_;
 
-    void insert_to_level(size_t level, KeyT key) {
+    void insert_to_level(size_t level, const KeyT& key, const ValueT& value) {
         if (level >= caches_.size())
             return;
 
-        KeyT victim = caches_[level]->insert(key);
+        auto victim = caches_[level]->insert(key, value);
 
-        if (victim != -1) {
-            insert_to_level(level + 1, victim);
+        if (victim) {
+            insert_to_level(level + 1, victim->first, victim->second);
         }
     }
 public:
@@ -35,11 +37,11 @@ public:
     }
     
 
-    bool request(KeyT key) {
+    bool request(const KeyT& key, ValueT& value) {
         // Ищем страницу начиная с L1
         for (size_t i = 0; i < caches_.size(); ++i) {
 
-            if (caches_[i]->lookup(key)) {
+            if (caches_[i]->lookup(key, value)) {
                 hits_[i]++;
 
                 // Страница была найдена на уровне i.
@@ -49,19 +51,19 @@ public:
 
                 // Страница найдена на уровне i.
                 // перемещаем в L1(все вытесненные пойдут вниз)
-                insert_to_level(0, key);
+                insert_to_level(0, key, value);
                 return true;
             }
             misses_[i]++;
         }
 
 
-        slow_get_page(key);
+        value = slow_get_page(key);
 
         // Загружаем её в L1.
         // Если L1 переполнен, вытесненный элемент
         // автоматически пойдёт в L2, затем при необходимости в L3.
-        insert_to_level(0, key); 
+        insert_to_level(0, key, value); 
 
         return false;
     }
