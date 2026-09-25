@@ -13,7 +13,6 @@
 
 int cache_start(int argc, char* argv[]);
 size_t run_simulation(size_t capacity, std::istream& is);
-int slow_get_page(int key); 
 
 template <typename KeyT, typename ValueT>
 class cache_interface {
@@ -23,6 +22,7 @@ public:
     virtual bool lookup(const KeyT& key, ValueT& value) = 0;
     virtual std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) = 0;
     virtual void erase(const KeyT& key) = 0;
+    virtual void print_cache() const = 0;
 };
 
 // ============================================================================
@@ -94,6 +94,12 @@ public:
         }
         cache_.erase(it->second);
         hash_.erase(it);
+    }
+
+    void print_cache() const override {
+        for (const auto& node : cache_) {
+            std::cout << node.key << " -> " << node.value << '\n';
+        }
     }
 };
 
@@ -201,6 +207,18 @@ public:
             }
         }
     }
+    void print_cache() const override {
+    
+        for (const auto& [freq, list] : freq_map_) {
+            std::cout << "freq " << freq << ":\n";
+
+            for (const auto& node : list) {
+                std::cout << "    "
+                        << node.key << " -> "
+                        << node.value << '\n';
+            }
+        }
+    }
 };
 
 // ============================================================================
@@ -264,7 +282,7 @@ public:
         std::optional<std::pair<KeyT, ValueT>> victim;
 
         // Если кэш заполнен: вытесняем из in_, либо из main_
-        if (hash_.size() == capacity_) {
+        if (hash_.size() > capacity_) {
             if (in_.size() >= kin_ || main_.empty()) {
                 hash_.erase(in_.back().key);
                 victim = std::make_pair (
@@ -300,6 +318,23 @@ public:
        }
 
        hash_.erase(it);
+    }
+    void print_cache() const override {
+        std::cout << "IN:\n";
+
+        for (const auto& node : in_) {
+            std::cout << "    "
+                      << node.key << " -> "
+                      << node.value << '\n';
+        }
+
+        std::cout << "MAIN:\n";
+
+        for (const auto& node : main_) {
+            std::cout << "    "
+                      << node.key << " -> "
+                      << node.value << '\n';
+        }
     }
 };
 
@@ -459,6 +494,35 @@ public:
             auto node_it = std::get<TListIt>(it->second.first);
             t2_.erase(node_it);
             hash_.erase(it);
+        }
+    }
+    void print_cache() const override {
+        std::cout << "T1:\n";
+
+        for (const auto& node : t1_) {
+            std::cout << "    "
+                      << node.key << " -> "
+                      << node.value << '\n';
+        }
+
+        std::cout << "T2:\n";
+
+        for (const auto& node : t2_) {
+            std::cout << "    "
+                      << node.key << " -> "
+                      << node.value << '\n';
+        }
+
+        std::cout << "B1:\n";
+
+        for (const auto& key : b1_) {
+            std::cout << "    " << key << '\n';
+        }
+
+        std::cout << "B2:\n";
+
+        for (const auto& key : b2_) {
+            std::cout << "    " << key << '\n';
         }
     }
 };
@@ -680,6 +744,31 @@ public:
         }
 
         hash_.erase(it);
+    }
+    void print_cache() const override {
+        std::cout << "S:\n";
+
+        for (const auto& key : S_) {
+            auto it = hash_.find(key);
+
+            if (it != hash_.end()) {
+                std::cout << "    "
+                          << key << " -> "
+                          << it->second.value << '\n';
+            }
+        }
+
+        std::cout << "Q:\n";
+
+        for (const auto& key : Q_) {
+            auto it = hash_.find(key);
+
+            if (it != hash_.end()) {
+                std::cout << "    "
+                          << key << " -> "
+                          << it->second.value << '\n';
+            }
+        }
     }
 };
 

@@ -3,17 +3,13 @@
 #include <fstream>
 
 
-int slow_get_page(int key) {
-    return (key);
-}
-
 template <typename KeyT = int, typename ValueT = int>
 void run_simulation(multi_cache_t<KeyT, ValueT>& cache, std::istream& is) {
     KeyT page_key;
     ValueT value;
     
     while (is >> page_key) {
-        value = slow_get_page(page_key);
+        value = cache.slow_get_page(page_key);
         cache.request(page_key, value);
     }
 
@@ -81,6 +77,8 @@ int cache_start(int argc, char* argv[]) {
 
         run_simulation(cache, file);
         cache.print_stats(); 
+        cache.print_cache(3);
+
 
         return 0;
     }
