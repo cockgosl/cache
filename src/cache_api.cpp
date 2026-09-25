@@ -2,15 +2,19 @@
 #include "cache_api.hpp"
 #include <fstream>
 
+
 int slow_get_page(int key) {
     return (key);
 }
 
-void run_simulation(multi_cache_t<int>& cache, std::istream& is) {
-    int page_key = 0;
-
+template <typename KeyT = int, typename ValueT = int>
+void run_simulation(multi_cache_t<KeyT, ValueT>& cache, std::istream& is) {
+    KeyT page_key;
+    ValueT value;
+    
     while (is >> page_key) {
-        cache.request(page_key);
+        value = slow_get_page(page_key);
+        cache.request(page_key, value);
     }
 
     if (!is.eof() && is.fail()) {
@@ -37,7 +41,7 @@ int cache_start(int argc, char* argv[]) {
             return 1;
         }
 
-        multi_cache_t<int> cache;
+        multi_cache_t<int, int> cache;
 
         for (size_t i = 0; i < cache_count; ++i) {
             std::string cache_type;
@@ -54,19 +58,19 @@ int cache_start(int argc, char* argv[]) {
             }
 
             if (cache_type == "lru") {
-                cache.add_cache<lru_cache_t<int>>(capacity);
+                cache.add_cache<lru_cache_t<int, int>>(capacity);
             }
             else if (cache_type == "2q") {
-                cache.add_cache<two_q_cache_t<int>>(capacity);
+                cache.add_cache<two_q_cache_t<int, int>>(capacity);
             }
             else if (cache_type == "lfu") {
-                cache.add_cache<lfu_cache_t<int>>(capacity);
+                cache.add_cache<lfu_cache_t<int, int>>(capacity);
             }
             else if (cache_type == "lirs") {
-                cache.add_cache<lirs_cache_t<int>>(capacity);
+                cache.add_cache<lirs_cache_t<int, int>>(capacity);
             }
             else if (cache_type == "arc") {
-                cache.add_cache<arc_cache_t<int>>(capacity);
+                cache.add_cache<arc_cache_t<int, int>>(capacity);
             }
             else {
                 std::cerr << "Ошибка: неизвестный тип кеша '"
