@@ -45,7 +45,6 @@ public:
     // Конструктор инициализации емкости
     explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
-
     bool lookup(const KeyT& key, ValueT& value) override {
         auto it = hash_.find(key);
 
@@ -65,7 +64,7 @@ public:
             it->second->value = value;
             return std::nullopt;
         }
-        
+
         // Добавляем новый элемент в начало
         cache_.push_front({key, value});
 
@@ -139,7 +138,9 @@ public:
             freq_map_[freq].erase(node_it);
             if (freq_map_[freq].empty()) {
                 freq_map_.erase(freq);
-                if (min_freq_ == freq) min_freq_++;
+                if (min_freq_ == freq) {
+                    min_freq_++;
+                }
             }
 
             // Переносим элемент в группу с увеличенной частотой (freq + 1)
@@ -179,7 +180,6 @@ public:
             key_map_.erase(victim->first);
         }
 
-        
         min_freq_ = 1;
         return victim;
     }
@@ -194,7 +194,7 @@ public:
         freq_map_[freq].erase(node_it);
         if (freq_map_[freq].empty()) {
             freq_map_.erase(freq);
-        } 
+        }
         key_map_.erase(it);
         if (key_map_.empty()) {
             min_freq_ = 0;
@@ -202,13 +202,14 @@ public:
         else if (freq == min_freq_ && freq_map_.find(freq) == freq_map_.end()) {
             min_freq_ = 0;
             for (const auto& pair : freq_map_) {
-                if (min_freq_ == 0 || pair.first < min_freq_)
+                if (min_freq_ == 0 || pair.first < min_freq_) {
                     min_freq_ = pair.first;
+                }
             }
         }
     }
     void print_cache() const override {
-    
+
         for (const auto& [freq, list] : freq_map_) {
             std::cout << "freq " << freq << ":\n";
 
@@ -230,7 +231,6 @@ private:
     size_t capacity_; // Емкость
     size_t kin_;      // Лимит размера FIFO-очереди
 
-                          
     struct Node {
         KeyT key;
         ValueT value;
@@ -238,7 +238,7 @@ private:
 
     std::list<Node> in_;   // FIFO очередь для новых элементов (A1in)
     std::list<Node> main_; // LRU список для постоянных элементов (Am)
-     
+
     using ListIt = typename std::list<Node>::iterator;
 
     // Ключ -> {Итератор, Флаг (true = находится в main_, false = в in_)}
@@ -246,7 +246,7 @@ private:
 
 public:
     explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {}
-    bool lookup(const KeyT& key, ValueT& value) override{
+    bool lookup(const KeyT& key, ValueT& value) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
@@ -267,11 +267,11 @@ public:
             return false;
         }
     }
-    std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override{
+    std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
 
         auto hit = hash_.find(key);
         if (hit != hash_.end()) {
-            hit->second.first->value = value;    
+            hit->second.first->value = value;
             return std::nullopt;
         }
 
@@ -290,7 +290,8 @@ public:
                         in_.back().value
                 );
                 in_.pop_back();
-            } else {
+            }
+            else {
                 hash_.erase(main_.back().key);
                 victim = std::make_pair (
                         main_.back().key,
@@ -305,9 +306,11 @@ public:
     void erase(const KeyT& key) override {
        auto it = hash_.find(key);
 
-       if (it == hash_.end())
+       if (it == hash_.end()) {
+
            return;
 
+       }
        if (it->second.second) {
            // Ключ находится в main_
            main_.erase(it->second.first);
@@ -370,7 +373,8 @@ private:
             t1_.pop_back();
             b1_.push_front(old.key);
             hash_[old.key] = {b1_.begin(), 'a'};
-        } else {
+        }
+        else {
             old = t2_.back();
             std::pair<KeyT, ValueT> victim{
                 old.key,
@@ -398,8 +402,12 @@ public:
 
             value = node_it->value;
 
-            
-            if (hit->second.second == '1') t2_.splice(t2_.begin(), t1_, node_it);
+            if (hit->second.second == '1') {
+
+                t2_.splice(t2_.begin(), t1_, node_it);
+
+            }
+
             else t2_.splice(t2_.begin(), t2_, node_it);
 
             // Переводим элемент в список частых T2
@@ -411,7 +419,7 @@ public:
         }
 
     }
-    std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override{
+    std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
         std::optional<std::pair<KeyT, ValueT>> victim;
         auto hit = hash_.find(key);
 
@@ -424,7 +432,6 @@ public:
             return std::nullopt;
         }
 
-        
         // 2. HIT в истории B1 (адаптируем p_ в сторону увеличение размера T1)
         if (hit != hash_.end() && hit->second.second == 'a') {
             p_ = std::min(c_, p_ + std::max<size_t>(1, b2_.size() / b1_.size()));
@@ -457,19 +464,21 @@ public:
         // 4. Полный MISS
         if (t1_.size() + b1_.size() == c_) {
             if (t1_.size() < c_) {
-                hash_.erase(b1_.back()); 
-                b1_.pop_back(); 
+                hash_.erase(b1_.back());
+                b1_.pop_back();
                 victim = replace(key);
-            } else {
-                hash_.erase(t1_.back().key); 
+            }
+            else {
+                hash_.erase(t1_.back().key);
                 t1_.pop_back();
             }
-        } else if (t1_.size() + b1_.size() < c_) {
+        }
+        else if (t1_.size() + b1_.size() < c_) {
             size_t total = t1_.size() + t2_.size() + b1_.size() + b2_.size();
             if (total >= c_) {
-                if (total == 2 * c_) { 
-                    hash_.erase(b2_.back()); 
-                    b2_.pop_back(); 
+                if (total == 2 * c_) {
+                    hash_.erase(b2_.back());
+                    b2_.pop_back();
                 }
                 victim = replace(key);
             }
@@ -482,9 +491,11 @@ public:
     void erase(const KeyT& key) override {
         auto it = hash_.find(key);
 
-        if (it == hash_.end())
+        if (it == hash_.end()) {
+
             return;
 
+        }
         if (it->second.second == '1') {
             auto node_it = std::get<TListIt>(it->second.first);
             t1_.erase(node_it);
@@ -557,9 +568,12 @@ private:
             KeyT k = S_.back();
             auto it = hash_.find(k);
             if (it == hash_.end() || it->second.status != LIR) {
-                if (it != hash_.end()) it->second.in_stack = false;
+                if (it != hash_.end()) {
+                    it->second.in_stack = false;
+                }
                 S_.pop_back();
-            } else {
+            }
+            else {
                 break;
             }
         }
@@ -577,12 +591,12 @@ public:
             if (info.status == LIR) {
                 S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
-            } 
+            }
             else if (info.status == HIR_RES) {
                 bool was_in_stack = info.in_stack;
                 if (was_in_stack) {
                     S_.splice(S_.begin(), S_, info.stack_it);
-                } 
+                }
                 else {
                     S_.push_front(key);
                 }
@@ -598,7 +612,8 @@ public:
                     Q_.push_front(bottom_lir);
                     hash_[bottom_lir].q_it = Q_.begin();
                     prune_stack();
-                } else {
+                }
+                else {
                     Q_.erase(info.q_it);
                     Q_.push_front(key);
                     info.q_it = Q_.begin();
@@ -620,7 +635,7 @@ public:
             return std::nullopt;
         }
 
-        std::optional<std::pair<KeyT, ValueT>> victim;    
+        std::optional<std::pair<KeyT, ValueT>> victim;
 
         // Если физический кеш заполнен,
         // вытесняем самый старый HIR_RES
@@ -634,11 +649,9 @@ public:
                     hash_[victim_key].value
                 );
 
-
                 hash_[victim_key].status = HIR_NON_RES;
             }
         }
-
 
         // HIR_NON_RES:
         // ключ известен LIRS, но физически отсутствует в кеше
@@ -682,12 +695,9 @@ public:
             return victim;
         }
 
-        // ------------------------------------------------
+        // ============================================================================
         // НОВЫЙ КЛЮЧ
-        // ------------------------------------------------
-
-       
-
+        // ============================================================================
         BlockInfo info;
         info.value = value;
 
@@ -714,19 +724,21 @@ public:
         hash_[key] = info;
 
         return victim;
-    } 
+    }
     void erase(const KeyT& key) override {
         auto it = hash_.find(key);
 
-        if (it == hash_.end())
+        if (it == hash_.end()) {
+
             return;
 
+        }
         BlockInfo& info = it->second;
 
         // HIR_NON_RES физически уже не находится в кеше.
-        if (info.status == HIR_NON_RES)
+        if (info.status == HIR_NON_RES) {
             return;
-
+        }
         // Удаляем из S_
         if (info.in_stack) {
             S_.erase(info.stack_it);

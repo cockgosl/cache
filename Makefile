@@ -1,4 +1,4 @@
-ifeq ($(origin CXX), default) 
+ifeq ($(origin CXX), default)
 	CXX = g++
 endif
 
@@ -12,7 +12,7 @@ override CXXFLAGS += $(COMMONINC)
 
 CXXSRC = src/main.cpp src/cache_api.cpp
 
-CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o)) 
+CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o))
 
 DEPS = $(CXXOBJ:.o=.d)
 
