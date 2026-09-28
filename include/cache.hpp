@@ -148,7 +148,8 @@ public:
             key_map_[key] = freq_map_[freq + 1].begin();
 
             return true;
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -197,7 +198,8 @@ public:
         key_map_.erase(it);
         if (key_map_.empty()) {
             min_freq_ = 0;
-        } else if (freq == min_freq_ && freq_map_.find(freq) == freq_map_.end()) {
+        }
+        else if (freq == min_freq_ && freq_map_.find(freq) == freq_map_.end()) {
             min_freq_ = 0;
             for (const auto& pair : freq_map_) {
                 if (min_freq_ == 0 || pair.first < min_freq_) {
@@ -260,7 +262,8 @@ public:
                 hit->second.second = true;
             }
             return true;
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -287,7 +290,8 @@ public:
                         in_.back().value
                 );
                 in_.pop_back();
-            } else {
+            }
+            else {
                 hash_.erase(main_.back().key);
                 victim = std::make_pair (
                         main_.back().key,
@@ -310,7 +314,8 @@ public:
        if (it->second.second) {
            // Ключ находится в main_
            main_.erase(it->second.first);
-       } else {
+       }
+       else {
            // Ключ находится в in_
            in_.erase(it->second.first);
        }
@@ -368,7 +373,8 @@ private:
             t1_.pop_back();
             b1_.push_front(old.key);
             hash_[old.key] = {b1_.begin(), 'a'};
-        } else {
+        }
+        else {
             old = t2_.back();
             std::pair<KeyT, ValueT> victim{
                 old.key,
@@ -401,12 +407,14 @@ public:
                 t2_.splice(t2_.begin(), t1_, node_it);
 
             }
+
             else t2_.splice(t2_.begin(), t2_, node_it);
 
             // Переводим элемент в список частых T2
             hash_[key] = {t2_.begin(), '2'};
             return true;
-        } else {
+        }
+        else {
             return false;
         }
 
@@ -441,7 +449,8 @@ public:
             size_t d = delta > 0 ? delta : 1;
             if (p_ > d) {
                 p_ = p_ - d;
-            } else {
+            }
+            else {
                 p_ = 0;
             }
             victim = replace(key);
@@ -458,11 +467,13 @@ public:
                 hash_.erase(b1_.back());
                 b1_.pop_back();
                 victim = replace(key);
-            } else {
+            }
+            else {
                 hash_.erase(t1_.back().key);
                 t1_.pop_back();
             }
-        } else if (t1_.size() + b1_.size() < c_) {
+        }
+        else if (t1_.size() + b1_.size() < c_) {
             size_t total = t1_.size() + t2_.size() + b1_.size() + b2_.size();
             if (total >= c_) {
                 if (total == 2 * c_) {
@@ -489,7 +500,8 @@ public:
             auto node_it = std::get<TListIt>(it->second.first);
             t1_.erase(node_it);
             hash_.erase(it);
-        } else if (it->second.second == '2') {
+        }
+        else if (it->second.second == '2') {
             auto node_it = std::get<TListIt>(it->second.first);
             t2_.erase(node_it);
             hash_.erase(it);
@@ -560,7 +572,8 @@ private:
                     it->second.in_stack = false;
                 }
                 S_.pop_back();
-            } else {
+            }
+            else {
                 break;
             }
         }
@@ -578,11 +591,13 @@ public:
             if (info.status == LIR) {
                 S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
-            } else if (info.status == HIR_RES) {
+            }
+            else if (info.status == HIR_RES) {
                 bool was_in_stack = info.in_stack;
                 if (was_in_stack) {
                     S_.splice(S_.begin(), S_, info.stack_it);
-                } else {
+                }
+                else {
                     S_.push_front(key);
                 }
                 info.stack_it = S_.begin();
@@ -597,14 +612,16 @@ public:
                     Q_.push_front(bottom_lir);
                     hash_[bottom_lir].q_it = Q_.begin();
                     prune_stack();
-                } else {
+                }
+                else {
                     Q_.erase(info.q_it);
                     Q_.push_front(key);
                     info.q_it = Q_.begin();
                 }
             }
             return true;
-        } else {
+        }
+        else {
             return false;
         }
 
