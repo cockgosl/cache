@@ -2,12 +2,11 @@
 #include "cache_api.hpp"
 #include <fstream>
 
-
 template <typename KeyT = int, typename ValueT = int>
 void run_simulation(multi_cache_t<KeyT, ValueT>& cache, std::istream& is) {
     KeyT page_key;
     ValueT value;
-    
+
     while (is >> page_key) {
         value = cache.slow_get_page(page_key);
         cache.request(page_key, value);
@@ -55,20 +54,15 @@ int cache_start(int argc, char* argv[]) {
 
             if (cache_type == "lru") {
                 cache.add_cache<lru_cache_t<int, int>>(capacity);
-            }
-            else if (cache_type == "2q") {
+            } else if (cache_type == "2q") {
                 cache.add_cache<two_q_cache_t<int, int>>(capacity);
-            }
-            else if (cache_type == "lfu") {
+            } else if (cache_type == "lfu") {
                 cache.add_cache<lfu_cache_t<int, int>>(capacity);
-            }
-            else if (cache_type == "lirs") {
+            } else if (cache_type == "lirs") {
                 cache.add_cache<lirs_cache_t<int, int>>(capacity);
-            }
-            else if (cache_type == "arc") {
+            } else if (cache_type == "arc") {
                 cache.add_cache<arc_cache_t<int, int>>(capacity);
-            }
-            else {
+            } else {
                 std::cerr << "Ошибка: неизвестный тип кеша '"
                           << cache_type << "'\n";
                 return 1;
@@ -76,9 +70,8 @@ int cache_start(int argc, char* argv[]) {
         }
 
         run_simulation(cache, file);
-        cache.print_stats(); 
+        cache.print_stats();
         cache.print_cache(3);
-
 
         return 0;
     }
