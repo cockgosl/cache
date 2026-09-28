@@ -9,8 +9,6 @@
 #include <iostream>
 #include <random>
 
-
-
 template <typename KeyT = int, typename ValueT = int>
 class multi_cache_t {
 private:
@@ -22,9 +20,9 @@ private:
     std::unordered_map<KeyT, ValueT> slow_memory_;
 
     void insert_to_level(size_t level, const KeyT& key, const ValueT& value) {
-        if (level >= caches_.size())
+        if (level >= caches_.size()) {
             return;
-
+        }
         auto victim = caches_[level]->insert(key, value);
 
         if (victim) {
@@ -39,7 +37,6 @@ public:
         hits_.push_back(0);
         misses_.push_back(0);
     }
-    
 
     bool request(const KeyT& key, ValueT& value) {
         // Ищем страницу начиная с L1
@@ -56,7 +53,6 @@ public:
                 // Убираем её оттуда.
                 caches_[i]->erase(key);
 
-
                 // Страница найдена на уровне i.
                 // перемещаем в L1(все вытесненные пойдут вниз)
                 insert_to_level(0, key, value);
@@ -65,13 +61,12 @@ public:
             misses_[i]++;
         }
 
-
         value = slow_get_page(key);
 
         // Загружаем её в L1.
         // Если L1 переполнен, вытесненный элемент
         // автоматически пойдёт в L2, затем при необходимости в L3.
-        insert_to_level(0, key, value); 
+        insert_to_level(0, key, value);
 
         return false;
     }
@@ -92,7 +87,7 @@ public:
         return value;
     }
 
-    //распечатка информации о первых amount кешах
+    // распечатка информации о первых amount кешах
     void print_cache(size_t amount) const {
         if (amount > caches_.size()) {
             std::cout << "incorrect amount of caches\n";
@@ -104,8 +99,7 @@ public:
             caches_[i]->print_cache();
             std::cout << '\n';
         }
-    }   
-
+    }
 
     void print_stats() const {
         for (size_t i = 0; i < caches_.size(); ++i) {
