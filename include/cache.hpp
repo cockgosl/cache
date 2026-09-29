@@ -469,8 +469,11 @@ public:
                 victim = replace(key);
             }
             else {
-                hash_.erase(t1_.back().key);
+                Node old = t1_.back();
+                victim = std::make_pair(old.key, old.value);
                 t1_.pop_back();
+                b1_.push_front(old.key);
+                hash_[old.key] = {b1_.begin(), 'a'};
             }
         }
         else if (t1_.size() + b1_.size() < c_) {
