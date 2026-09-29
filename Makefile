@@ -31,6 +31,26 @@ $(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
 	$(CXX) -E $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@
 
 -include $(DEPS)
+
+#Tests
+TEST_DIR = tests
+TEST_BIN = build/cache_tests
+
+TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
+
+GTEST_LIBS = -lgtest -lgtest_main -pthread
+
+.PHONY: test test-filter
+
+test: $(TEST_BIN)
+	./$(TEST_BIN)
+
+test-filter: $(TEST_BIN)
+	./$(TEST_BIN) --gtest_filter="$(FILTER)"
+
+$(TEST_BIN): $(TEST_SRC)
+	$(CXX) $(CXXFLAGS) $(COMMONINC) $(TEST_SRC) $(GTEST_LIBS) -o $@
+
 PHONY: clean
 clean:
 	rm -rf $(OUT_O_DIR)
