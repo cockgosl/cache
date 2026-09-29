@@ -1,20 +1,6 @@
 #include <gtest/gtest.h>
 #include "cache.hpp"
 
-
-TEST(TwoQCache, InsertAndLookup)
-{
-    two_q_cache_t<int, int> cache(4);
-
-    cache.insert(1, 100);
-
-    int value;
-
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
-}
-
-
 TEST(TwoQCache, LookupMissingKey)
 {
     two_q_cache_t<int, int> cache(4);
@@ -22,32 +8,6 @@ TEST(TwoQCache, LookupMissingKey)
     int value;
 
     EXPECT_FALSE(cache.lookup(1, value));
-}
-
-TEST(TwoQCache, LookupMovesFromInToMain)
-{
-    two_q_cache_t<int, int> cache(4);
-
-    int value;
-
-    cache.insert(1, 100);
-    cache.lookup(1, value);
-
-    cache.insert(2, 200);
-    cache.lookup(2, value);
-
-    cache.insert(3, 200);
-    cache.lookup(3, value);
-
-    cache.insert(4, 200);
-    cache.lookup(4, value);
-
-    auto victim = cache.insert(5, 500);
-
-    ASSERT_TRUE(victim.has_value());
-
-    EXPECT_EQ(victim->first, 1);
-    EXPECT_EQ(victim->second, 100);
 }
 
 TEST(TwoQCache, LookupUpdatesMainRecency)

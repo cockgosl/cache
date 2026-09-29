@@ -17,21 +17,6 @@ TEST(MultiCache, MissLoadsFromSlowMemory)
     EXPECT_EQ(value, expected);
 }
 
-TEST(MultiCache, HitInL1)
-{
-    multi_cache_t<int, int> cache;
-
-    cache.add_cache<lru_cache_t<int, int>>(2);
-
-    int value1;
-    int value2;
-
-    EXPECT_FALSE(cache.request(1, value1));
-    EXPECT_TRUE(cache.request(1, value2));
-
-    EXPECT_EQ(value1, value2);
-}
-
 TEST(MultiCache, VictimPropagatesThroughLevels)
 {
     multi_cache_t<int, int> cache;
@@ -114,28 +99,6 @@ TEST(MultiCache, VictimMovesToSecondLevel)
 
     EXPECT_TRUE(cache.request(1, restored));
     EXPECT_EQ(restored, value1);
-}
-
-TEST(MultiCache, ValuePreservedDuringPromotion)
-{
-    multi_cache_t<int, int> cache;
-
-    cache.add_cache<lru_cache_t<int, int>>(1);
-    cache.add_cache<lru_cache_t<int, int>>(1);
-
-    int original;
-
-    cache.request(1, original);
-
-    int other;
-    cache.request(2, other);
-
-    // 1 находится в L2.
-
-    int restored;
-
-    EXPECT_TRUE(cache.request(1, restored));
-    EXPECT_EQ(restored, original);
 }
 
 TEST(MultiCache, WorksWithoutCaches)

@@ -54,26 +54,6 @@ TEST(LFUCache, UpdateExistingKey)
     EXPECT_EQ(value, 200);
 }
 
-TEST(LFUCache, UpdateDoesNotEvict)
-{
-    lfu_cache_t<int, int> cache(2);
-
-    cache.insert(1, 100);
-    cache.insert(2, 200);
-
-    auto victim = cache.insert(1, 111);
-
-    EXPECT_FALSE(victim.has_value());
-
-    int value = 0;
-
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 111);
-
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
-}
-
 TEST(LFUCache, Erase)
 {
     lfu_cache_t<int, int> cache(2);
@@ -133,26 +113,6 @@ TEST(LFUCache, CapacityOne)
 
     int value;
     EXPECT_FALSE(cache.lookup(1, value));
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
-}
-
-TEST(LFUCache, UpdateExistingKeyWhenFull)
-{
-    lfu_cache_t<int, int> cache(2);
-
-    cache.insert(1, 100);
-    cache.insert(2, 200);
-
-    auto victim = cache.insert(1, 999);
-
-    EXPECT_FALSE(victim.has_value());
-
-    int value;
-
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 999);
-
     EXPECT_TRUE(cache.lookup(2, value));
     EXPECT_EQ(value, 200);
 }

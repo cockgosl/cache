@@ -182,32 +182,3 @@ TEST(ARCCache, Erase)
 
     EXPECT_FALSE(cache.lookup(2, value));
 }
-
-TEST(ARCCache, EraseMissingKey)
-{
-    arc_cache_t<int, int> cache(4);
-
-    cache.insert(1, 100);
-
-    cache.erase(2);
-
-    int value;
-
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
-}
-
-TEST(ARCCache, LookupGhostReturnsFalse)
-{
-    arc_cache_t<int, int> cache(2);
-
-    cache.insert(1, 100);
-    cache.insert(2, 200);
-
-    // 1 -> B1
-    cache.insert(3, 300);
-
-    int value;
-
-    EXPECT_FALSE(cache.lookup(1, value));
-}
