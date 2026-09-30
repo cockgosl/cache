@@ -86,7 +86,7 @@ public:
 
         return std::nullopt;
     }
-    void erase(const KeyT& key) {
+    void erase(const KeyT& key) override {
         auto it = hash_.find(key);
         if (it == hash_.end()) {
             return;
@@ -364,30 +364,24 @@ private:
     // Вспомогательный метод вытеснения
     std::optional<std::pair<KeyT, ValueT>> replace(const KeyT& key) {
         Node old;
-        if (!t1_.empty() && (t1_.size() > p_ || (hash_.count(key) && hash_[key].second == 'b' && t1_.size() == p_))) {
+        // Если t2 пуст, мы ОБЯЗАНЫ вытеснять из t1 (и наоборот)
+        if (!t1_.empty() && (t2_.empty() || t1_.size() > p_ || (hash_.count(key) && hash_[key].second == 'b' && t1_.size() == p_))) {
             old = t1_.back();
-            std::pair<KeyT, ValueT> victim{
-                old.key,
-                old.value
-            };
             t1_.pop_back();
             b1_.push_front(old.key);
             hash_[old.key] = {b1_.begin(), 'a'};
         }
-        else {
+        else if (!t2_.empty()) {
             old = t2_.back();
-            std::pair<KeyT, ValueT> victim{
-                old.key,
-                old.value
-            };
             t2_.pop_back();
             b2_.push_front(old.key);
             hash_[old.key] = {b2_.begin(), 'b'};
         }
-        return std::make_pair(
-            old.key,
-            old.value
-        );
+        else {
+            return std::nullopt;
+        }
+
+        return std::make_pair(old.key, old.value);
     }
 
 public:

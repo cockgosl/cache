@@ -2,7 +2,7 @@ ifeq ($(origin CXX), default)
 	CXX = g++
 endif
 
-CXXFLAGS ?= -g -no-pie -O2 -Wall -Wextra -std=c++17
+CXXFLAGS ?= -g -O2 -fsanitize=address -Wall -Wextra -std=c++17
 OUT_O_DIR ?= build
 COMMONINC = -I./include
 SRC = src
@@ -20,7 +20,7 @@ DEPS = $(CXXOBJ:.o=.d)
 all: $(OUT_O_DIR)/out
 
 $(OUT_O_DIR)/out : $(CXXOBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(CXXOBJ) : $(OUT_O_DIR)/%.o : %.cpp
 	@mkdir -p $(@D)
@@ -32,7 +32,7 @@ $(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
 
 -include $(DEPS)
 
-#Tests
+# Tests
 TEST_DIR = tests
 TEST_BIN = build/cache_tests
 
@@ -40,7 +40,7 @@ TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
 
 GTEST_LIBS = -lgtest -lgtest_main -pthread
 
-.PHONY: test test-filter
+.PHONY: test test-filter clean
 
 test: $(TEST_BIN)
 	./$(TEST_BIN)
@@ -51,6 +51,5 @@ test-filter: $(TEST_BIN)
 $(TEST_BIN): $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) $(COMMONINC) $(TEST_SRC) $(GTEST_LIBS) -o $@
 
-PHONY: clean
 clean:
 	rm -rf $(OUT_O_DIR)
