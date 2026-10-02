@@ -9,11 +9,11 @@ TEST(MultiCache, MissLoadsFromSlowMemory)
 
     int value;
 
-    EXPECT_FALSE(cache.request(1, value));
+    EXPECT_FALSE(cache.request_exclusive(1, value));
 
     int expected = value;
 
-    EXPECT_TRUE(cache.request(1, value));
+    EXPECT_TRUE(cache.request_exclusive(1, value));
     EXPECT_EQ(value, expected);
 }
 
@@ -28,13 +28,13 @@ TEST(MultiCache, VictimPropagatesThroughLevels)
     int v2;
     int v3;
 
-    cache.request(1, v1);
-    cache.request(2, v2);
+    cache.request_exclusive(1, v1);
+    cache.request_exclusive(2, v2);
 
     // L1: 2
     // L2: 1
 
-    cache.request(3, v3);
+    cache.request_exclusive(3, v3);
 
     // L1: 3
     // L2: 2
@@ -42,10 +42,10 @@ TEST(MultiCache, VictimPropagatesThroughLevels)
 
     int value;
 
-    EXPECT_TRUE(cache.request(2, value));
+    EXPECT_TRUE(cache.request_exclusive(2, value));
     EXPECT_EQ(value, v2);
 
-    EXPECT_TRUE(cache.request(1, value) == false);
+    EXPECT_TRUE(cache.request_exclusive(1, value) == false);
     EXPECT_EQ(value, v1);
 }
 
@@ -61,9 +61,9 @@ TEST(MultiCache, ThreeLevels)
     int v2;
     int v3;
 
-    cache.request(1, v1);
-    cache.request(2, v2);
-    cache.request(3, v3);
+    cache.request_exclusive(1, v1);
+    cache.request_exclusive(2, v2);
+    cache.request_exclusive(3, v3);
 
     // После этого:
     //
@@ -73,7 +73,7 @@ TEST(MultiCache, ThreeLevels)
 
     int value;
 
-    EXPECT_TRUE(cache.request(1, value));
+    EXPECT_TRUE(cache.request_exclusive(1, value));
     EXPECT_EQ(value, v1);
 }
 
@@ -88,16 +88,16 @@ TEST(MultiCache, VictimMovesToSecondLevel)
     int value2;
     int value3;
 
-    EXPECT_FALSE(cache.request(1, value1));
-    EXPECT_FALSE(cache.request(2, value2));
+    EXPECT_FALSE(cache.request_exclusive(1, value1));
+    EXPECT_FALSE(cache.request_exclusive(2, value2));
 
     // L1 заполнен. 1 будет вытеснена в L2.
-    EXPECT_FALSE(cache.request(3, value3));
+    EXPECT_FALSE(cache.request_exclusive(3, value3));
 
     // 1 теперь должна находиться в L2.
     int restored;
 
-    EXPECT_TRUE(cache.request(1, restored));
+    EXPECT_TRUE(cache.request_exclusive(1, restored));
     EXPECT_EQ(restored, value1);
 }
 
@@ -108,8 +108,8 @@ TEST(MultiCache, WorksWithoutCaches)
     int value1;
     int value2;
 
-    EXPECT_FALSE(cache.request(1, value1));
-    EXPECT_FALSE(cache.request(1, value2));
+    EXPECT_FALSE(cache.request_exclusive(1, value1));
+    EXPECT_FALSE(cache.request_exclusive(1, value2));
 
     EXPECT_EQ(value1, value2);
 }
