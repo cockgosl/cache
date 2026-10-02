@@ -113,3 +113,68 @@ TEST(MultiCache, WorksWithoutCaches)
 
     EXPECT_EQ(value1, value2);
 }
+
+TEST(MultiCacheInclusive, MissLoadsPageIntoAllLevels)
+{
+    multi_cache_t<int, int> cache;
+
+    cache.add_cache<lru_cache_t<int, int>>(2);
+    cache.add_cache<lru_cache_t<int, int>>(3);
+    cache.add_cache<lru_cache_t<int, int>>(4);
+
+    int value;
+
+    EXPECT_FALSE(cache.request_inclusive(1, value));
+
+    int expected = value;
+
+    EXPECT_TRUE(cache.request_inclusive(1, value));
+    EXPECT_EQ(value, expected);
+}
+
+
+TEST(MultiCacheInclusive, HitInLowerLevelKeepsPageInHierarchy)
+{
+    multi_cache_t<int, int> cache;
+
+    cache.add_cache<lru_cache_t<int, int>>(1);
+    cache.add_cache<lru_cache_t<int, int>>(2);
+
+    int value1;
+    int value2;
+
+    cache.request_inclusive(1, value1);
+    cache.request_inclusive(2, value2);
+
+    int value;
+
+    EXPECT_TRUE(cache.request_inclusive(1, value));
+    EXPECT_EQ(value, value1);
+
+    // 1 must still be available after being promoted to L1.
+    EXPECT_TRUE(cache.request_inclusive(1, value));
+    EXPECT_EQ(value, value1);
+}
+
+
+TEST(MultiCacheInclusive, EvictionInvalidatesUpperLevel)
+{
+    multi_cache_t<int, int> cache;
+
+    cache.add_cache<lru_cache_t<int, int>>(2);
+    cache.add_cache<lru_cache_t<int, int>>(2);
+
+    int value1;
+    int value2;
+    int value3;
+
+    cache.request_inclusive(1, value1);
+    cache.request_inclusive(2, value2);
+    cache.request_inclusive(3, value3);
+
+    int value;
+
+    // Page 1 must be absent from L1 if it was evicted from L2.
+    EXPECT_FALSE(cache.request_inclusive(1, value));
+    EXPECT_EQ(value, value1);
+}

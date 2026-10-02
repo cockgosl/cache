@@ -95,7 +95,7 @@ public:
             if (caches_[i]->lookup(key, value)) {
                 hits_[i]++;
                 if (i == 0) {
-                    return 0;
+                    return true;
                 }
                 // как минимум нужно обновить данные
                 insert_inclusive(0, key, value);
