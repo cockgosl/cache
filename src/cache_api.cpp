@@ -9,7 +9,7 @@ void run_simulation(multi_cache_t<KeyT, ValueT>& cache, std::istream& is) {
 
     while (is >> page_key) {
         value = cache.slow_get_page(page_key);
-        cache.request(page_key, value);
+        cache.request_inclusive(page_key, value);
     }
 
     if (!is.eof() && is.fail()) {
@@ -76,7 +76,7 @@ int cache_start(int argc, char* argv[]) {
 
         run_simulation(cache, file);
         cache.print_stats();
-        cache.print_cache(3);
+        cache.print_cache(cache.size());
 
         return 0;
     }

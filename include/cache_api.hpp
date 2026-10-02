@@ -19,15 +19,34 @@ private:
 
     std::unordered_map<KeyT, ValueT> slow_memory_;
 
-    void insert_to_level(size_t level, const KeyT& key, const ValueT& value) {
+    void insert_exclusive(size_t level, const KeyT& key, const ValueT& value) {
         if (level >= caches_.size()) {
             return;
         }
         auto victim = caches_[level]->insert(key, value);
 
         if (victim) {
-            insert_to_level(level + 1, victim->first, victim->second);
+            insert_exclusive(level + 1, victim->first, victim->second);
         }
+    }
+
+    void invalidate_upper_levels(size_t level, const KeyT& key) {
+        for (size_t i = 0; i < level; i++) {
+            caches_[i]->erase(key);
+        }
+    }
+
+    void insert_inclusive(size_t level, const KeyT& key, const ValueT& value) {
+        if (level >= caches_.size()) {
+            return;
+        } 
+
+        auto victim = caches_[level]->insert(key, value);
+        if (victim) {
+            invalidate_upper_levels(level, victim->first); 
+        }
+
+        insert_inclusive(level+1, key, value);
     }
 public:
     template <typename Cache>
@@ -38,9 +57,9 @@ public:
         misses_.push_back(0);
     }
 
-    bool request(const KeyT& key, ValueT& value) {
+    bool request_exclusive(const KeyT& key, ValueT& value) {
         // Ищем страницу начиная с L1
-        for (size_t i = 0; i < caches_.size(); ++i) {
+        for (size_t i = 0; i < caches_.size(); i++) {
 
             if (caches_[i]->lookup(key, value)) {
                 hits_[i]++;
@@ -55,7 +74,7 @@ public:
 
                 // Страница найдена на уровне i.
                 // перемещаем в L1(все вытесненные пойдут вниз)
-                insert_to_level(0, key, value);
+                insert_exclusive(0, key, value);
                 return true;
             }
             misses_[i]++;
@@ -66,7 +85,28 @@ public:
         // Загружаем её в L1.
         // Если L1 переполнен, вытесненный элемент
         // автоматически пойдёт в L2, затем при необходимости в L3.
-        insert_to_level(0, key, value);
+        insert_exclusive(0, key, value);
+
+        return false;
+    }
+
+    bool request_inclusive(const KeyT& key, ValueT& value) {
+        for (size_t i = 0; i < caches_.size(); i++) {
+            if (caches_[i]->lookup(key, value)) {
+                hits_[i]++;
+                if (i == 0) {
+                    return true;
+                }
+                // как минимум нужно обновить данные
+                insert_inclusive(0, key, value);
+                return true;
+            }
+            misses_[i]++;
+        }
+        
+        value = slow_get_page(key);
+
+        insert_inclusive(0, key, value);
 
         return false;
     }
@@ -85,6 +125,10 @@ public:
         slow_memory_[key] = value;
 
         return value;
+    }
+
+    size_t size() {
+        return caches_.size();
     }
 
     // распечатка информации о первых amount кешах
