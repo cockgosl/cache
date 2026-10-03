@@ -2,7 +2,7 @@ ifeq ($(origin CXX), default)
 	CXX = g++
 endif
 
-CXXFLAGS ?= -g -no-pie -O2 -Wall -Wextra -std=c++17
+CXXFLAGS ?= -g -O2 -Wall -Wextra -std=c++17
 OUT_O_DIR ?= build
 COMMONINC = -I./include
 SRC = src
