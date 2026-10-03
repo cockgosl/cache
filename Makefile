@@ -6,17 +6,27 @@ CXXFLAGS ?= -g -O2 -Wall -Wextra -std=c++17
 OUT_O_DIR ?= build
 COMMONINC = -I./include
 SRC = src
-ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 override CXXFLAGS += $(COMMONINC)
 
 CXXSRC = src/main.cpp src/cache_api.cpp
-
 CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o))
-
 DEPS = $(CXXOBJ:.o=.d)
 
-.PHONY: all
+# Тесты
+TEST_DIR = tests
+TEST_BIN = $(OUT_O_DIR)/cache_tests
+TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
+GTEST_LIBS = -lgtest -lgtest_main -pthread
+
+# Бенчмарки
+BENCH_SRC = benchmarks/benchmark.cpp
+BENCH_OUT = $(OUT_O_DIR)/benchmark
+
+# Объявление всех псевдоцелей (чтобы Make не путал их с директориями)
+.PHONY: all test test-filter benchmark benchmarks clean
+
 all: $(OUT_O_DIR)/out
 
 $(OUT_O_DIR)/out : $(CXXOBJ)
@@ -32,16 +42,7 @@ $(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
 
 -include $(DEPS)
 
-#Tests
-TEST_DIR = tests
-TEST_BIN = build/cache_tests
-
-TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
-
-GTEST_LIBS = -lgtest -lgtest_main -pthread
-
-.PHONY: test test-filter
-
+# Tests
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
@@ -51,6 +52,15 @@ test-filter: $(TEST_BIN)
 $(TEST_BIN): $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) $(COMMONINC) $(TEST_SRC) $(GTEST_LIBS) -o $@
 
-PHONY: clean
+# Benchmarks
+benchmarks: benchmark
+
+benchmark: $(BENCH_OUT)
+	./$(BENCH_OUT)
+
+$(BENCH_OUT): $(BENCH_SRC)
+	@mkdir -p $(OUT_O_DIR)
+	$(CXX) $(CXXFLAGS) $< -o $@
+
 clean:
 	rm -rf $(OUT_O_DIR)
