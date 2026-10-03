@@ -63,30 +63,30 @@
 ### Workload: HOT/COLD
 - **Requests**: 5000
 - **Capacity**: 30
-- **Ideal Belady Hits**: 4392 (Hit Ratio: 87.84%)
+- **Ideal Belady Hits**: 4407 (Hit Ratio: 88.14%)
 
 | Algorithm | Hits | Hit Ratio (%) | Ideal Hits | Efficiency (%) |
 | :--- | :--- | :--- | :--- | :--- |
-| LRU | 4261 | 85.22 | 4392 | 97.02 |
-| 2Q | 4276 | 85.52 | 4392 | 97.36 |
-| LFU | 4275 | 85.50 | 4392 | 97.34 |
-| LIRS | 4277 | 85.54 | 4392 | 97.38 |
-| ARC | 4271 | 85.42 | 4392 | 97.24 |
+| LRU | 4263 | 85.26 | 4407 | 96.73 |
+| 2Q | 4285 | 85.70 | 4407 | 97.23 |
+| LFU | 4289 | 85.78 | 4407 | 97.32 |
+| LIRS | 4289 | 85.78 | 4407 | 97.32 |
+| ARC | 4288 | 85.76 | 4407 | 97.30 |
 
 #### Multi-Level Cache (LRU+LRU) | HOT/COLD
 - **L1 Capacity**: 10, **L2 Capacity**: 20 (Total: 30)
 
 **[INCLUSIVE]**
-- Total Hits: 3781
-- Hit Ratio: 75.62%
-- Efficiency: 86.09%
-- Memory Accesses: 1219
+- Total Hits: 3798
+- Hit Ratio: 75.96%
+- Efficiency: 86.18%
+- Memory Accesses: 1202
 
 **[EXCLUSIVE]**
-- Total Hits: 4261
-- Hit Ratio: 85.22%
-- Efficiency: 97.02%
-- Memory Accesses: 739
+- Total Hits: 4263
+- Hit Ratio: 85.26%
+- Efficiency: 96.73%
+- Memory Accesses: 737
 
 ---
 
@@ -97,86 +97,86 @@
 
 | Algorithm | Hits | Hit Ratio (%) | Ideal Hits | Efficiency (%) |
 | :--- | :--- | :--- | :--- | :--- |
-| LRU | 4702 | 94.04 | 4747 | 99.05 |
-| 2Q | 4692 | 93.84 | 4747 | 98.84 |
-| LFU | 641 | 12.82 | 4747 | 13.50 |
-| LIRS | 4531 | 90.62 | 4747 | 95.45 |
-| ARC | 4697 | 93.94 | 4747 | 98.95 |
+| LRU | 4720 | 94.40 | 4747 | 99.43 |
+| 2Q | 4710 | 94.20 | 4747 | 99.22 |
+| LFU | 645 | 12.90 | 4747 | 13.59 |
+| LIRS | 4535 | 90.70 | 4747 | 95.53 |
+| ARC | 4713 | 94.26 | 4747 | 99.28 |
 
 #### Multi-Level Cache (LRU+LRU) | WORKING_SET
 - **L1 Capacity**: 10, **L2 Capacity**: 20 (Total: 30)
 
 **[INCLUSIVE]**
-- Total Hits: 3863
-- Hit Ratio: 77.26%
-- Efficiency: 81.38%
-- Memory Accesses: 1137
+- Total Hits: 3857
+- Hit Ratio: 77.14%
+- Efficiency: 81.25%
+- Memory Accesses: 1143
 
 **[EXCLUSIVE]**
-- Total Hits: 4702
-- Hit Ratio: 94.04%
-- Efficiency: 99.05%
-- Memory Accesses: 298
+- Total Hits: 4720
+- Hit Ratio: 94.40%
+- Efficiency: 99.43%
+- Memory Accesses: 280
 
 ---
 
 ### Workload: MIXED
 - **Requests**: 5000
 - **Capacity**: 30
-- **Ideal Belady Hits**: 3444 (Hit Ratio: 68.88%)
+- **Ideal Belady Hits**: 3853 (Hit Ratio: 77.06%)
 
 | Algorithm | Hits | Hit Ratio (%) | Ideal Hits | Efficiency (%) |
 | :--- | :--- | :--- | :--- | :--- |
-| LRU | 2772 | 55.44 | 3444 | 80.49 |
-| 2Q | 2880 | 57.60 | 3444 | 83.62 |
-| LFU | 2883 | 57.66 | 3444 | 83.71 |
-| LIRS | 2732 | 54.64 | 3444 | 79.33 |
-| ARC | 2810 | 56.20 | 3444 | 81.59 |
+| LRU | 3342 | 66.84 | 3853 | 86.74 |
+| 2Q | 3453 | 69.06 | 3853 | 89.62 |
+| LFU | 3453 | 69.06 | 3853 | 89.62 |
+| LIRS | 3340 | 66.80 | 3853 | 86.69 |
+| ARC | 3388 | 67.76 | 3853 | 87.93 |
 
 #### Multi-Level Cache (LRU+LRU) | MIXED
 - **L1 Capacity**: 10, **L2 Capacity**: 20 (Total: 30)
 
 **[INCLUSIVE]**
-- Total Hits: 2631
-- Hit Ratio: 52.62%
-- Efficiency: 76.39%
-- Memory Accesses: 2369
+- Total Hits: 3154
+- Hit Ratio: 63.08%
+- Efficiency: 81.86%
+- Memory Accesses: 1846
 
 **[EXCLUSIVE]**
-- Total Hits: 2772
-- Hit Ratio: 55.44%
-- Efficiency: 80.49%
-- Memory Accesses: 2228
+- Total Hits: 3342
+- Hit Ratio: 66.84%
+- Efficiency: 86.74%
+- Memory Accesses: 1658
 
 ---
 
 ### Workload: RANDOM
 - **Requests**: 5000
 - **Capacity**: 30
-- **Ideal Belady Hits**: 2619 (Hit Ratio: 52.38%)
+- **Ideal Belady Hits**: 2598 (Hit Ratio: 51.96%)
 
 | Algorithm | Hits | Hit Ratio (%) | Ideal Hits | Efficiency (%) |
 | :--- | :--- | :--- | :--- | :--- |
-| LRU | 1010 | 20.20 | 2619 | 38.56 |
-| 2Q | 1028 | 20.56 | 2619 | 39.25 |
-| LFU | 990 | 19.80 | 2619 | 37.80 |
-| LIRS | 1222 | 24.44 | 2619 | 46.66 |
-| ARC | 1005 | 20.10 | 2619 | 38.37 |
+| LRU | 987 | 19.74 | 2598 | 37.99 |
+| 2Q | 989 | 19.78 | 2598 | 38.07 |
+| LFU | 941 | 18.82 | 2598 | 36.22 |
+| LIRS | 1202 | 24.04 | 2598 | 46.27 |
+| ARC | 1018 | 20.36 | 2598 | 39.18 |
 
 #### Multi-Level Cache (LRU+LRU) | RANDOM
 - **L1 Capacity**: 10, **L2 Capacity**: 20 (Total: 30)
 
 **[INCLUSIVE]**
-- Total Hits: 690
-- Hit Ratio: 13.80%
-- Efficiency: 26.35%
-- Memory Accesses: 4310
+- Total Hits: 654
+- Hit Ratio: 13.08%
+- Efficiency: 25.17%
+- Memory Accesses: 4346
 
 **[EXCLUSIVE]**
-- Total Hits: 1010
-- Hit Ratio: 20.20%
-- Efficiency: 38.56%
-- Memory Accesses: 3990
+- Total Hits: 987
+- Hit Ratio: 19.74%
+- Efficiency: 37.99%
+- Memory Accesses: 4013
 
 ---
 

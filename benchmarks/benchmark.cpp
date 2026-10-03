@@ -1,14 +1,8 @@
-#include "../include/cache.hpp"
-#include "../include/cache_api.hpp"
+#include "cache.hpp"
+#include "cache_api.hpp"
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <unordered_map>
-#include <random>
 #include <iomanip>
-#include <string>
-#include <algorithm>
+#include <fstream>
 
 // ============================================================================
 // 1. ИДЕАЛЬНЫЙ АЛГОРИТМ БЕЛАДИ (Belady's OPT)

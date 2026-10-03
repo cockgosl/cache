@@ -8,7 +8,6 @@ void run_simulation(multi_cache_t<KeyT, ValueT>& cache, std::istream& is) {
     ValueT value;
 
     while (is >> page_key) {
-        value = cache.slow_get_page(page_key);
         cache.request_inclusive(page_key, value);
     }
 
