@@ -86,7 +86,11 @@ public:
 
         return std::nullopt;
     }
+<<<<<<< HEAD
     void erase(const KeyT& key) override {
+=======
+    void erase(const KeyT& key) override{
+>>>>>>> main
         auto it = hash_.find(key);
         if (it == hash_.end()) {
             return;

@@ -13,7 +13,7 @@ void run_simulation(multi_cache_t<int, int>& cache, std::istream& is) {
     int value = 0;
     while (is >> page_key) {
         value = cache.slow_get_page(page_key);
-        cache.request(page_key, value);
+        cache.request_inclusive(page_key, value);
     }
     if (!is.eof() && is.fail()) {
         std::cerr << "Ошибка: встречен некорректный символ во входном файле.\n";
@@ -256,6 +256,11 @@ int cache_start(int argc, char* argv[]) {
 
         run_simulation(cache, file);
         cache.print_stats();
+<<<<<<< HEAD
+=======
+        cache.print_cache(cache.size());
+
+>>>>>>> main
         return 0;
     }
     catch (const std::exception& e) {
