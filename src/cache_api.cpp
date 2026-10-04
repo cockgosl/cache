@@ -1,270 +1,157 @@
+#ifndef CACHE_API
+#define CACHE_API
+
 #include "cache.hpp"
-#include "cache_api.hpp"
-#include <fstream>
-#include <sstream>
+#include <memory>
+#include <unordered_map>
 #include <vector>
-#include <unordered_set>
-#include <iomanip>
-#include <string>
+#include <cstddef>
 #include <iostream>
+#include <random>
 
-void run_simulation(multi_cache_t<int, int>& cache, std::istream& is) {
-    int page_key = 0;
-    int value = 0;
-    while (is >> page_key) {
-        value = cache.slow_get_page(page_key);
-        cache.request_inclusive(page_key, value);
-    }
-    if (!is.eof() && is.fail()) {
-        std::cerr << "Ошибка: встречен некорректный символ во входном файле.\n";
-        exit(1);
-    }
-}
+template <typename KeyT = int, typename ValueT = int>
+class multi_cache_t {
+private:
+    std::vector< std::unique_ptr<cache_interface<KeyT, ValueT>> > caches_;
 
-// Идеальный кэш Белади (для подсчета теоретического максимума hits)
-size_t ideal_cache_hits(const std::vector<int>& requests, size_t capacity) {
-    std::unordered_set<int> cache;
-    size_t hits = 0;
+    std::vector<size_t> hits_;
+    std::vector<size_t> misses_;
 
-    for (size_t i = 0; i < requests.size(); ++i) {
-        if (cache.find(requests[i]) != cache.end()) {
-            hits++;
-        } else {
-            if (cache.size() == capacity) {
-                int furthest_key = -1;
-                size_t furthest_idx = 0;
+    std::unordered_map<KeyT, ValueT> slow_memory_;
 
-                for (int key : cache) {
-                    size_t next_idx = i + 1;
-                    while (next_idx < requests.size() && requests[next_idx] != key) {
-                        next_idx++;
-                    }
-                    if (next_idx > furthest_idx) {
-                        furthest_idx = next_idx;
-                        furthest_key = key;
-                    }
-                }
-                cache.erase(furthest_key);
-            }
-            cache.insert(requests[i]);
+    void insert_exclusive(size_t level, const KeyT& key, const ValueT& value) {
+        if (level >= caches_.size()) {
+            return;
+        }
+        auto victim = caches_[level]->insert(key, value);
+
+        if (victim) {
+            insert_exclusive(level + 1, victim->first, victim->second);
         }
     }
-    return hits;
-}
 
-// Обёртка тестирования L1 для Key-Value структуры
-template <typename Cache1>
-size_t test_cache_l1(const std::vector<int>& reqs, size_t cap) {
-    multi_cache_t<int, int> cache;
-    cache.add_cache<Cache1>(cap);
-
-    size_t total_hits = 0;
-    int val = 0;
-    for (int r : reqs) {
-        if (cache.request(r, val)) total_hits++;
+    void invalidate_upper_levels(size_t level, const KeyT& key) {
+        for (size_t i = 0; i < level; i++) {
+            caches_[i]->erase(key);
+        }
     }
-    return total_hits;
-}
 
-// Обёртка тестирования L1 + L2 (включая смешанные конфигурации)
-template <typename Cache1, typename Cache2>
-size_t test_cache_l2(const std::vector<int>& reqs, size_t cap1, size_t cap2) {
-    multi_cache_t<int, int> cache;
-    cache.add_cache<Cache1>(cap1);
-    cache.add_cache<Cache2>(cap2);
+    void insert_inclusive(size_t level, const KeyT& key, const ValueT& value) {
+        if (level >= caches_.size()) {
+            return;
+        } 
 
-    size_t total_hits = 0;
-    int val = 0;
-    for (int r : reqs) {
-        if (cache.request(r, val)) total_hits++;
+        auto victim = caches_[level]->insert(key, value);
+        if (victim) {
+            invalidate_upper_levels(level, victim->first); 
+        }
+
+        insert_inclusive(level+1, key, value);
     }
-    return total_hits;
-}
+public:
+    template <typename Cache>
+    void add_cache(size_t capacity) {
+        caches_.push_back(std::make_unique<Cache>(capacity));
 
-struct RowResult {
-    std::string name;
-    std::vector<size_t> hits;
+        hits_.push_back(0);
+        misses_.push_back(0);
+    }
+
+    bool request_exclusive(const KeyT& key, ValueT& value) {
+        // Ищем страницу начиная с L1
+        for (size_t i = 0; i < caches_.size(); i++) {
+
+            if (caches_[i]->lookup(key, value)) {
+                hits_[i]++;
+
+                if (i == 0) {
+                    return true;
+                }
+
+                // Страница была найдена на уровне i.
+                // Убираем её оттуда.
+                caches_[i]->erase(key);
+
+                // Страница найдена на уровне i.
+                // перемещаем в L1(все вытесненные пойдут вниз)
+                insert_exclusive(0, key, value);
+                return true;
+            }
+            misses_[i]++;
+        }
+
+        value = slow_get_page(key);
+
+        // Загружаем её в L1.
+        // Если L1 переполнен, вытесненный элемент
+        // автоматически пойдёт в L2, затем при необходимости в L3.
+        insert_exclusive(0, key, value);
+
+        return false;
+    }
+
+    bool request_inclusive(const KeyT& key, ValueT& value) {
+        for (size_t i = 0; i < caches_.size(); i++) {
+            if (caches_[i]->lookup(key, value)) {
+                hits_[i]++;
+                if (i == 0) {
+                    return true;
+                }
+                // как минимум нужно обновить данные
+                insert_inclusive(0, key, value);
+                return true;
+            }
+            misses_[i]++;
+        }
+        
+        value = slow_get_page(key);
+
+        insert_inclusive(0, key, value);
+
+        return false;
+    }
+
+    ValueT slow_get_page(const KeyT& key) {
+        auto it = slow_memory_.find(key);
+
+        if (it != slow_memory_.end()) {
+            return it->second;
+        }
+
+        static std::mt19937 gen(std::random_device{}());
+        static std::uniform_int_distribution<ValueT> dist(0, 1000000);
+
+        ValueT value = dist(gen);
+        slow_memory_[key] = value;
+
+        return value;
+    }
+
+    size_t size() {
+        return caches_.size();
+    }
+
+    // распечатка информации о первых amount кешах
+    void print_cache(size_t amount) const {
+        if (amount > caches_.size()) {
+            std::cout << "incorrect amount of caches\n";
+            return;
+        }
+
+        for (size_t i = 0; i < amount; ++i) {
+            std::cout << "L" << i + 1 << ":\n";
+            caches_[i]->print_cache();
+            std::cout << '\n';
+        }
+    }
+
+    void print_stats() const {
+        for (size_t i = 0; i < caches_.size(); ++i) {
+            std::cout << "L" << i + 1 << ":\n";
+            std::cout << "    Hits: " << hits_[i] << '\n';
+            std::cout << "    Misses: " << misses_[i] << '\n';
+        }
+    }
 };
 
-void run_unit_tests(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Ошибка: Не удалось открыть файл тестов '" << filename << "'\n";
-        return;
-    }
-
-    std::vector<std::vector<int>> test_data;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty()) continue;
-        std::istringstream iss(line);
-        std::vector<int> reqs;
-        int val;
-        while (iss >> val) reqs.push_back(val);
-        if (!reqs.empty()) test_data.push_back(reqs);
-    }
-
-    if (test_data.empty()) {
-        std::cerr << "Внимание: Файл тестов пуст или имеет неверный формат.\n";
-        return;
-    }
-
-    const size_t L1_SIZE = 20;
-    const size_t L2_SIZE = 50;
-
-    // Алиасы типов для ухода от проблем с запятыми в макросах
-    using LRUCache  = lru_cache_t<int, int>;
-    using LFUCache  = lfu_cache_t<int, int>;
-    using TwoQCache = two_q_cache_t<int, int>;
-    using ARCCache  = arc_cache_t<int, int>;
-    using LIRSCache = lirs_cache_t<int, int>;
-
-    std::vector<RowResult> results_l1;
-    std::vector<RowResult> results_l2;
-    std::vector<size_t> ideal_l1_hits;
-    std::vector<size_t> ideal_l2_hits;
-
-    #define RUN_L1(NAME, CACHE) \
-        { RowResult r; r.name = NAME; \
-          for (const auto& reqs : test_data) r.hits.push_back(test_cache_l1<CACHE>(reqs, L1_SIZE)); \
-          results_l1.push_back(r); }
-
-    #define RUN_L2(NAME, CACHE1, CACHE2) \
-        { RowResult r; r.name = NAME; \
-          for (const auto& reqs : test_data) r.hits.push_back(test_cache_l2<CACHE1, CACHE2>(reqs, L1_SIZE, L2_SIZE)); \
-          results_l2.push_back(r); }
-
-    std::cout << "[TEST] Выполнение тестов L1...\n";
-    RUN_L1("LRU",  LRUCache);
-    RUN_L1("LFU",  LFUCache);
-    RUN_L1("2Q",   TwoQCache);
-    RUN_L1("ARC",  ARCCache);
-    RUN_L1("LIRS", LIRSCache);
-
-    std::cout << "[TEST] Выполнение тестов L1+L2 (однородные и смешанные)...\n";
-    // Однородные
-    RUN_L2("LRU + LRU",   LRUCache,  LRUCache);
-    RUN_L2("LFU + LFU",   LFUCache,  LFUCache);
-    RUN_L2("2Q + 2Q",     TwoQCache, TwoQCache);
-    RUN_L2("ARC + ARC",   ARCCache,  ARCCache);
-    RUN_L2("LIRS + LIRS", LIRSCache, LIRSCache);
-
-    // Смешанные / Гибридные
-    RUN_L2("LRU + ARC",   LRUCache,  ARCCache);
-    RUN_L2("LRU + LIRS",  LRUCache,  LIRSCache);
-    RUN_L2("LRU + 2Q",    LRUCache,  TwoQCache);
-    RUN_L2("LFU + ARC",   LFUCache,  ARCCache);
-    RUN_L2("ARC + LRU",   ARCCache,  LRUCache);
-    RUN_L2("LIRS + LRU",  LIRSCache, LRUCache);
-
-    #undef RUN_L1
-    #undef RUN_L2
-
-    std::cout << "[TEST] Вычисление идеального кэша Белади...\n";
-    for (const auto& reqs : test_data) {
-        ideal_l1_hits.push_back(ideal_cache_hits(reqs, L1_SIZE));
-        ideal_l2_hits.push_back(ideal_cache_hits(reqs, L1_SIZE + L2_SIZE));
-    }
-
-    // Генерация таблицы Markdown
-    std::ofstream md("cache_results.md");
-    md << "# Результаты тестирования кэшей (Вертикальная таблица)\n\n";
-    md << "**Параметры:** Ёмкость L1 = " << L1_SIZE << ", Ёмкость L2 = " << L2_SIZE << "\n\n";
-
-    md << "| Алгоритм / Комбинация |";
-
-    md << "Тест 1 (радномные числа) |";
-    md << "Тест 2 (возрастание) |";
-    md << "Тест 3 (убывание) |";
-    md << "Тест 4 (почти отсортированные) |";
-    md << "Тест 5 (много повторов)|";
-    /*
-    for (size_t i = 0; i < test_data.size(); ++i) {
-        md << " Тест " << i + 1 << " (N=" << test_data[i].size() << ") |";
-    }*/
-    md << "\n| :--- |";
-    for (size_t i = 0; i < test_data.size(); ++i) md << " :---: |";
-    md << "\n";
-
-    md << "| **Одноуровневые кэши (L1)** |";
-    for (size_t i = 0; i < test_data.size(); ++i) md << " |";
-    md << "\n";
-
-    for (const auto& res : results_l1) {
-        md << "| " << res.name << " |";
-        for (size_t h : res.hits) md << " " << h << " |";
-        md << "\n";
-    }
-
-    md << "| *Идеал L1 (Белади)* |";
-    for (size_t h : ideal_l1_hits) md << " **" << h << "** |";
-    md << "\n";
-
-    md << "| **Двухуровневые кэши (L1+L2)** |";
-    for (size_t i = 0; i < test_data.size(); ++i) md << " |";
-    md << "\n";
-
-    for (const auto& res : results_l2) {
-        md << "| " << res.name << " |";
-        for (size_t h : res.hits) md << " " << h << " |";
-        md << "\n";
-    }
-
-    md << "| *Идеал L1+L2 (Белади)* |";
-    for (size_t h : ideal_l2_hits) md << " **" << h << "** |";
-    md << "\n";
-
-    std::cout << "[TEST] Завершено! Сохранено в 'cache_results.md'.\n";
-}
-
-int cache_start(int argc, char* argv[]) {
-    try {
-        if (argc > 2 && std::string(argv[1]) == "-test") {
-            run_unit_tests(argv[2]);
-            return 0;
-        }
-
-        std::string filename = (argc > 1) ? argv[1] : "txt/input.txt";
-        std::ifstream file(filename);
-
-        if (!file.is_open()) {
-            std::cerr << "Ошибка: Не удалось открыть файл " << filename << "'\n";
-            return 1;
-        }
-
-        size_t cache_count;
-        if (!(file >> cache_count)) {
-            std::cerr << "Ошибка: не указано количество кешей\n";
-            return 1;
-        }
-
-        multi_cache_t<int, int> cache;
-
-        for (size_t i = 0; i < cache_count; ++i) {
-            std::string cache_type;
-            int capacity;
-
-            if (!(file >> cache_type >> capacity) || capacity <= 0) return 1;
-
-            if (cache_type == "lru") cache.add_cache<lru_cache_t<int, int>>(capacity);
-            else if (cache_type == "2q") cache.add_cache<two_q_cache_t<int, int>>(capacity);
-            else if (cache_type == "lfu") cache.add_cache<lfu_cache_t<int, int>>(capacity);
-            else if (cache_type == "lirs") cache.add_cache<lirs_cache_t<int, int>>(capacity);
-            else if (cache_type == "arc") cache.add_cache<arc_cache_t<int, int>>(capacity);
-            else return 1;
-        }
-
-        run_simulation(cache, file);
-        cache.print_stats();
-<<<<<<< HEAD
-=======
-        cache.print_cache(cache.size());
-
->>>>>>> main
-        return 0;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Исключение: " << e.what() << "\n";
-        return 1;
-    }
-}
+#endif //CACHE_API
