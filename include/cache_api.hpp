@@ -57,6 +57,12 @@ public:
         misses_.push_back(0);
     }
 
+    void add_cache(std::unique_ptr<cache_interface<KeyT, ValueT>> cache) {
+        caches_.push_back(std::move(cache));
+        hits_.push_back(0);
+        misses_.push_back(0);
+    }
+
     bool request_exclusive(const KeyT& key, ValueT& value) {
         // Ищем страницу начиная с L1
         for (size_t i = 0; i < caches_.size(); i++) {
@@ -125,6 +131,14 @@ public:
         slow_memory_[key] = value;
 
         return value;
+    }
+    
+    size_t hits(size_t level) const {
+        return hits_[level];
+    }   
+
+    size_t misses(size_t level) const {
+        return misses_[level];
     }
 
     size_t size() {

@@ -474,12 +474,7 @@ public:
                 victim = replace(false);
             }
             else {
-                if (!t1_.empty()) {
-                    Node old = t1_.back();
-                    victim = std::make_pair(old.key, old.value);
-                    t1_.pop_back();
-                    hash_.erase(old.key);
-                }
+                victim = replace(false);    
             }
         }
         else {
