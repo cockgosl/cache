@@ -119,6 +119,7 @@ namespace Workloads {
 }
 
 // Запись строки в CSV
+
 void write_csv_row(
     std::ostream& os,
     const std::string& workload,
@@ -129,10 +130,18 @@ void write_csv_row(
     const std::string& mode,
     size_t hits,
     size_t ideal_hits,
-    size_t num_reqs)
+    size_t num_reqs,
+    size_t l1_hits = 0,
+    size_t l2_hits = 0,
+    size_t l3_hits = 0)
 {
     double hit_ratio = 100.0 * hits / num_reqs;
-    double efficiency = 100.0 * hits / ideal_hits;
+
+    double efficiency = 0.0;
+
+    if (ideal_hits > 0) {
+        efficiency = 100.0 * hits / ideal_hits;
+    }
 
     os << workload << ","
        << algo << ","
@@ -144,7 +153,10 @@ void write_csv_row(
        << std::fixed << std::setprecision(2)
        << hit_ratio << ","
        << ideal_hits << ","
-       << efficiency
+       << efficiency << ","
+       << l1_hits << ","
+       << l2_hits << ","
+       << l3_hits
        << "\n";
 }
 
@@ -242,8 +254,10 @@ void run_multi2(
         mode,
         hits,
         ideal_hits,
-        reqs.size()
-    );
+        reqs.size(),
+        cache.hits(0),
+        cache.hits(1)
+    ); 
 }
 
 void run_multi3(
@@ -296,10 +310,10 @@ void run_multi3(
 
     if (inclusive) {
         mode = "Inclusive";
-    } else {
+    } 
+    else {
         mode = "Exclusive";
     }
-
     write_csv_row(
         os,
         wl,
@@ -310,7 +324,10 @@ void run_multi3(
         mode,
         hits,
         ideal_hits,
-        reqs.size()
+        reqs.size(),
+        cache.hits(0),
+        cache.hits(1),
+        cache.hits(2)
     );
 }
 
@@ -430,8 +447,8 @@ int main() {
 
     // Заголовок CSV
     csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,L3_Capacity,"
-             << "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct\n";
-
+      "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
+      "L1_Hits,L2_Hits,L3_Hits\n";   
     const size_t NUM_REQUESTS = 5000;
     const size_t CACHE_CAPACITY = 30;
     const size_t L1_CAP = 10;
