@@ -2,11 +2,7 @@ ifeq ($(origin CXX), default)
 	CXX = g++
 endif
 
-<<<<<<< HEAD
 CXXFLAGS ?= -g -O2 -fsanitize=address -Wall -Wextra -std=c++17
-=======
-CXXFLAGS ?= -g -O2 -Wall -Wextra -std=c++17
->>>>>>> main
 OUT_O_DIR ?= build
 COMMONINC = -I./include
 SRC = src
@@ -28,7 +24,7 @@ GTEST_LIBS = -lgtest -lgtest_main -pthread
 BENCH_SRC = benchmarks/benchmark.cpp
 BENCH_OUT = $(OUT_O_DIR)/benchmark
 
-# Объявление всех псевдоцелей (чтобы Make не путал их с директориями)
+# Объявление всех псевдоцелей
 .PHONY: all test test-filter benchmark benchmarks clean
 
 all: $(OUT_O_DIR)/out
@@ -47,18 +43,6 @@ $(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
 -include $(DEPS)
 
 # Tests
-<<<<<<< HEAD
-TEST_DIR = tests
-TEST_BIN = build/cache_tests
-
-TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
-
-GTEST_LIBS = -lgtest -lgtest_main -pthread
-
-.PHONY: test test-filter clean
-
-=======
->>>>>>> main
 test: $(TEST_BIN)
 	./$(TEST_BIN)
 
@@ -68,18 +52,19 @@ test-filter: $(TEST_BIN)
 $(TEST_BIN): $(TEST_SRC)
 	$(CXX) $(CXXFLAGS) $(COMMONINC) $(TEST_SRC) $(GTEST_LIBS) -o $@
 
-<<<<<<< HEAD
-=======
 # Benchmarks
 benchmarks: benchmark
+	./$(BENCH_OUT)
+	@echo "Generating plots..."
+	python3 benchmarks/plot_benchmarks.py
 
 benchmark: $(BENCH_OUT)
-	./$(BENCH_OUT)
 
 $(BENCH_OUT): $(BENCH_SRC)
 	@mkdir -p $(OUT_O_DIR)
 	$(CXX) $(CXXFLAGS) $< -o $@
 
->>>>>>> main
 clean:
 	rm -rf $(OUT_O_DIR)
+	rm -rf benchmarks/plots
+	rm -f benchmarks/benchmarks.csv

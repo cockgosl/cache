@@ -61,7 +61,7 @@ size_t test_cache_l1(const std::vector<int>& reqs, size_t cap) {
     size_t total_hits = 0;
     int val = 0;
     for (int r : reqs) {
-        if (cache.request(r, val)) total_hits++;
+        if (cache.request_inclusive(r, val)) total_hits++;
     }
     return total_hits;
 }
@@ -76,10 +76,11 @@ size_t test_cache_l2(const std::vector<int>& reqs, size_t cap1, size_t cap2) {
     size_t total_hits = 0;
     int val = 0;
     for (int r : reqs) {
-        if (cache.request(r, val)) total_hits++;
+        if (cache.request_inclusive(r, val)) total_hits++;
     }
     return total_hits;
 }
+
 
 struct RowResult {
     std::string name;
@@ -228,7 +229,7 @@ int cache_start(int argc, char* argv[]) {
         std::ifstream file(filename);
 
         if (!file.is_open()) {
-            std::cerr << "Ошибка: Не удалось открыть файл " << filename << "'\n";
+            std::cerr << "Ошибка: Не удалось открыть файл '" << filename << "'\n";
             return 1;
         }
 
@@ -256,11 +257,8 @@ int cache_start(int argc, char* argv[]) {
 
         run_simulation(cache, file);
         cache.print_stats();
-<<<<<<< HEAD
-=======
         cache.print_cache(cache.size());
 
->>>>>>> main
         return 0;
     }
     catch (const std::exception& e) {
