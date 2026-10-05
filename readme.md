@@ -406,13 +406,13 @@ CSV содержит информацию о:
 
 Наиболее наглядным показателем для сравнения конфигураций является суммарная эффективность относительно Belady. Ниже приведены десять лучших двух- и трёхуровневых конфигураций для каждой схемы организации кеша.
 
-![Top 10 two-level Exclusive](benchmarks/plots/top_10_two_level_exclusive.png)
+![Top 10 two-level Exclusive](benchmarks/plots/top_10_2_level_exclusive.png)
 
-![Top 10 two-level Inclusive](benchmarks/plots/top_10_two_level_inclusive.png)
+![Top 10 two-level Inclusive](benchmarks/plots/top_10_2_level_inclusive.png)
 
-![Top 10 three-level Exclusive](benchmarks/plots/top_10_three_level_exclusive.png)
+![Top 10 three-level Exclusive](benchmarks/plots/top_10_3_level_exclusive.png)
 
-![Top 10 three-level Inclusive](benchmarks/plots/top_10_three_level_inclusive.png)
+![Top 10 three-level Inclusive](benchmarks/plots/top_10_3_level_inclusive.png)
 
 На графиках каждый столбец разбит на сегменты L1, L2 и L3. Таким образом, высота столбца показывает суммарный вклад конфигурации относительно Belady, а отдельные сегменты показывают, где именно были получены попадания.
 
