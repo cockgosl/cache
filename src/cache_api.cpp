@@ -20,37 +20,6 @@ void run_simulation(multi_cache_t<int, int>& cache, std::istream& is) {
     }
 }
 
-// Идеальный кэш Белади (для подсчета теоретического максимума hits)
-size_t ideal_cache_hits(const std::vector<int>& requests, size_t capacity) {
-    std::unordered_set<int> cache;
-    size_t hits = 0;
-
-    for (size_t i = 0; i < requests.size(); ++i) {
-        if (cache.find(requests[i]) != cache.end()) {
-            hits++;
-        } else {
-            if (cache.size() == capacity) {
-                int furthest_key = -1;
-                size_t furthest_idx = 0;
-
-                for (int key : cache) {
-                    size_t next_idx = i + 1;
-                    while (next_idx < requests.size() && requests[next_idx] != key) {
-                        next_idx++;
-                    }
-                    if (next_idx > furthest_idx) {
-                        furthest_idx = next_idx;
-                        furthest_key = key;
-                    }
-                }
-                cache.erase(furthest_key);
-            }
-            cache.insert(requests[i]);
-        }
-    }
-    return hits;
-}
-
 int cache_start(int argc, char* argv[]) {
     try {
         std::string filename = (argc > 1) ? argv[1] : "txt/input.txt";
