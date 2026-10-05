@@ -1,5 +1,5 @@
-#include "../include/cache.hpp"
-#include "../include/cache_api.hpp"
+#include "cache.hpp"
+#include "cache_api.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -9,6 +9,9 @@
 #include <iomanip>
 #include <string>
 #include <algorithm>
+#include <functional>
+#include <memory>
+
 
 // ИДЕАЛЬНЫЙ АЛГОРИТМ БЕЛАДИ (Belady's OPT)
 size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
@@ -116,11 +119,45 @@ namespace Workloads {
 }
 
 // Запись строки в CSV
-void write_csv_row(std::ostream& os, const std::string& workload, const std::string& algo, size_t l1_cap, size_t l2_cap, const std::string& mode, size_t hits, size_t ideal_hits, size_t num_reqs) {
-    double hit_ratio = (static_cast<double>(hits) / num_reqs) * 100.0;
-    double efficiency = ideal_hits > 0 ? (static_cast<double>(hits) / ideal_hits) * 100.0 : 0.0;
-    os << workload << "," << algo << "," << l1_cap << "," << l2_cap << "," << mode << ","
-       << hits << "," << hit_ratio << "," << ideal_hits << "," << efficiency << "\n";
+
+void write_csv_row(
+    std::ostream& os,
+    const std::string& workload,
+    const std::string& algo,
+    size_t l1_cap,
+    size_t l2_cap,
+    size_t l3_cap,
+    const std::string& mode,
+    size_t hits,
+    size_t ideal_hits,
+    size_t num_reqs,
+    size_t l1_hits = 0,
+    size_t l2_hits = 0,
+    size_t l3_hits = 0)
+{
+    double hit_ratio = 100.0 * hits / num_reqs;
+
+    double efficiency = 0.0;
+
+    if (ideal_hits > 0) {
+        efficiency = 100.0 * hits / ideal_hits;
+    }
+
+    os << workload << ","
+       << algo << ","
+       << l1_cap << ","
+       << l2_cap << ","
+       << l3_cap << ","
+       << mode << ","
+       << hits << ","
+       << std::fixed << std::setprecision(2)
+       << hit_ratio << ","
+       << ideal_hits << ","
+       << efficiency << ","
+       << l1_hits << ","
+       << l2_hits << ","
+       << l3_hits
+       << "\n";
 }
 
 // ТЕСТИРОВАНИЕ ОДИНОЧНЫХ КЭШЕЙ
@@ -140,7 +177,7 @@ void benchmark_single_caches(std::ostream& os, const std::string& wl_name, const
     size_t num_reqs = requests.size();
 
     auto test = [&](const std::string& name, size_t hits) {
-        write_csv_row(os, wl_name, name, capacity, 0, "Single", hits, ideal_hits, num_reqs);
+        write_csv_row(os, wl_name, name, capacity, 0, 0, "Single", hits, ideal_hits, num_reqs);
     };
 
     test("LRU", run_single_cache<lru_cache_t<int, int>>(capacity, requests));
@@ -150,43 +187,254 @@ void benchmark_single_caches(std::ostream& os, const std::string& wl_name, const
     test("ARC", run_single_cache<arc_cache_t<int, int>>(capacity, requests));
 }
 
-// ТЕСТИРОВАНИЕ МНОГОУРОВНЕВОГО КЭША
-template <typename L1_Cache, typename L2_Cache>
-void run_multi(std::ostream& os, const std::string& wl, const std::string& algo_name, const std::vector<int>& requests, size_t l1_cap, size_t l2_cap, bool inclusive) {
-    multi_cache_t<int, int> mc;
-    mc.add_cache<L1_Cache>(l1_cap);
-    mc.add_cache<L2_Cache>(l2_cap);
+using CacheFactory = std::function <std::unique_ptr<cache_interface<int, int>>(size_t)>;
 
-    size_t hits = 0; int dummy = 0;
-    for (int key : requests) {
-        if (inclusive ? mc.request_inclusive(key, dummy) : mc.request_exclusive(key, dummy)) hits++;
+// ТЕСТИРОВАНИЕ МНОГОУРОВНЕВОГО КЭША
+void run_multi2(
+    std::ostream& os,
+    const std::string& wl,
+    const std::string& algo,
+    const std::vector<int>& reqs,
+    size_t l1,
+    size_t l2,
+    bool inclusive,
+    const CacheFactory& factory1,
+    const CacheFactory& factory2) {
+
+    multi_cache_t<int, int> cache;
+
+    cache.add_cache(factory1(l1));
+    cache.add_cache(factory2(l2));
+
+    size_t hits = 0;
+    int value = 0;
+
+    for (int key : reqs) {
+        bool hit;
+
+        if (inclusive) {
+            hit = cache.request_inclusive(key, value);
+        } 
+        else {
+            hit = cache.request_exclusive(key, value);
+        }
+
+        if (hit) {
+            ++hits;
+        }
     }
 
-    // Для Inclusive полезный объем равен объему L2. Для Exclusive: L1 + L2
-    size_t opt_cap = inclusive ? l2_cap : (l1_cap + l2_cap);
-    size_t ideal_hits = belady_opt_hits(opt_cap, requests);
+    size_t ideal_capacity;
 
-    std::string mode = inclusive ? "Inclusive" : "Exclusive";
-    write_csv_row(os, wl, algo_name, l1_cap, l2_cap, mode, hits, ideal_hits, requests.size());
+    if (inclusive) {
+        ideal_capacity = l2;
+    } 
+    else {
+        ideal_capacity = l1 + l2;
+    }
+
+    size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
+
+    std::string mode;
+
+    if (inclusive) {
+        mode = "Inclusive";
+    } 
+    else {
+        mode = "Exclusive";
+    }
+
+    write_csv_row(
+        os,
+        wl,
+        algo,
+        l1,
+        l2,
+        0,
+        mode,
+        hits,
+        ideal_hits,
+        reqs.size(),
+        cache.hits(0),
+        cache.hits(1)
+    ); 
 }
 
-void benchmark_all_multi(std::ostream& os, const std::string& wl, const std::vector<int>& reqs, size_t l1, size_t l2) {
-    // Однородные
-    run_multi<lru_cache_t<int,int>, lru_cache_t<int,int>>(os, wl, "LRU+LRU", reqs, l1, l2, true);
-    run_multi<lru_cache_t<int,int>, lru_cache_t<int,int>>(os, wl, "LRU+LRU", reqs, l1, l2, false);
+void run_multi3(
+    std::ostream& os,
+    const std::string& wl,
+    const std::string& algo,
+    const std::vector<int>& reqs,
+    size_t l1,
+    size_t l2,
+    size_t l3,
+    bool inclusive,
+    const CacheFactory& factory1,
+    const CacheFactory& factory2,
+    const CacheFactory& factory3)
+{
+    multi_cache_t<int, int> cache;
 
-    run_multi<lfu_cache_t<int,int>, lfu_cache_t<int,int>>(os, wl, "LFU+LFU", reqs, l1, l2, true);
-    run_multi<lfu_cache_t<int,int>, lfu_cache_t<int,int>>(os, wl, "LFU+LFU", reqs, l1, l2, false);
+    cache.add_cache(factory1(l1));
+    cache.add_cache(factory2(l2));
+    cache.add_cache(factory3(l3));
 
-    run_multi<arc_cache_t<int,int>, arc_cache_t<int,int>>(os, wl, "ARC+ARC", reqs, l1, l2, true);
-    run_multi<arc_cache_t<int,int>, arc_cache_t<int,int>>(os, wl, "ARC+ARC", reqs, l1, l2, false);
+    size_t hits = 0;
+    int value = 0;
 
-    // Смешанные
-    run_multi<lru_cache_t<int,int>, arc_cache_t<int,int>>(os, wl, "LRU+ARC", reqs, l1, l2, true);
-    run_multi<lru_cache_t<int,int>, arc_cache_t<int,int>>(os, wl, "LRU+ARC", reqs, l1, l2, false);
+    for (int key : reqs) {
+        bool hit;
 
-    run_multi<lru_cache_t<int,int>, two_q_cache_t<int,int>>(os, wl, "LRU+2Q", reqs, l1, l2, true);
-    run_multi<lru_cache_t<int,int>, two_q_cache_t<int,int>>(os, wl, "LRU+2Q", reqs, l1, l2, false);
+        if (inclusive) {
+            hit = cache.request_inclusive(key, value);
+        } else {
+            hit = cache.request_exclusive(key, value);
+        }
+
+        if (hit) {
+            ++hits;
+        }
+    }
+
+    size_t ideal_capacity;
+
+    if (inclusive) {
+        ideal_capacity = l3;
+    } else {
+        ideal_capacity = l1 + l2 + l3;
+    }
+
+    size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
+
+    std::string mode;
+
+    if (inclusive) {
+        mode = "Inclusive";
+    } 
+    else {
+        mode = "Exclusive";
+    }
+    write_csv_row(
+        os,
+        wl,
+        algo,
+        l1,
+        l2,
+        l3,
+        mode,
+        hits,
+        ideal_hits,
+        reqs.size(),
+        cache.hits(0),
+        cache.hits(1),
+        cache.hits(2)
+    );
+}
+
+const std::vector<std::pair<std::string, CacheFactory>> cache_factories = {
+    {
+        "LFU",
+        [](size_t capacity) {
+            return std::make_unique<lfu_cache_t<int, int>>(capacity);
+        }
+    },
+    {
+        "2Q",
+        [](size_t capacity) {
+            return std::make_unique<two_q_cache_t<int, int>>(capacity);
+        }
+    },
+    {
+        "LIRS",
+        [](size_t capacity) {
+            return std::make_unique<lirs_cache_t<int, int>>(capacity);
+        }
+    },
+    {
+        "ARC",
+        [](size_t capacity) {
+            return std::make_unique<arc_cache_t<int, int>>(capacity);
+        }
+    }
+};
+
+void benchmark_all_multi(
+    std::ostream& os,
+    const std::string& wl,
+    const std::vector<int>& reqs,
+    size_t l1,
+    size_t l2,
+    size_t l3)
+{
+    for (const auto& cache1 : cache_factories) {
+        for (const auto& cache2 : cache_factories) {
+            std::string algo =
+                cache1.first + "+" + cache2.first;
+
+            run_multi2(
+                os,
+                wl,
+                algo,
+                reqs,
+                l1,
+                l2,
+                true,
+                cache1.second,
+                cache2.second
+            );
+
+            run_multi2(
+                os,
+                wl,
+                algo,
+                reqs,
+                l1,
+                l2,
+                false,
+                cache1.second,
+                cache2.second
+            );
+        }
+    }
+
+    for (const auto& cache1 : cache_factories) {
+        for (const auto& cache2 : cache_factories) {
+            for (const auto& cache3 : cache_factories) {
+                std::string algo =
+                    cache1.first + "+" +
+                    cache2.first + "+" +
+                    cache3.first;
+
+                run_multi3(
+                    os,
+                    wl,
+                    algo,
+                    reqs,
+                    l1,
+                    l2,
+                    l3,
+                    true,
+                    cache1.second,
+                    cache2.second,
+                    cache3.second
+                );
+
+                run_multi3(
+                    os,
+                    wl,
+                    algo,
+                    reqs,
+                    l1,
+                    l2,
+                    l3,
+                    false,
+                    cache1.second,
+                    cache2.second,
+                    cache3.second
+                );
+            }
+        }
+    }
 }
 
 int main() {
@@ -198,38 +446,40 @@ int main() {
     }
 
     // Заголовок CSV
-    csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct\n";
-
+    csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,L3_Capacity,"
+      "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
+      "L1_Hits,L2_Hits,L3_Hits\n";   
     const size_t NUM_REQUESTS = 5000;
     const size_t CACHE_CAPACITY = 30;
     const size_t L1_CAP = 10;
     const size_t L2_CAP = 20;
+    const size_t L3_CAP = 30;
 
     std::cout << "Running benchmarks (CSV output)...\n";
 
     auto loop_reqs = Workloads::generate_loop(NUM_REQUESTS, 35);
     benchmark_single_caches(csv_file, "LOOP", loop_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "LOOP", loop_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "LOOP", loop_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     auto scan_reqs = Workloads::generate_scan(NUM_REQUESTS);
     benchmark_single_caches(csv_file, "SCAN", scan_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "SCAN", scan_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "SCAN", scan_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     auto hot_cold_reqs = Workloads::generate_hot_cold(NUM_REQUESTS, 15, 500, 0.85);
     benchmark_single_caches(csv_file, "HOT_COLD", hot_cold_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "HOT_COLD", hot_cold_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "HOT_COLD", hot_cold_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     auto ws_reqs = Workloads::generate_working_set(NUM_REQUESTS, 25, 250);
     benchmark_single_caches(csv_file, "WORKING_SET", ws_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "WORKING_SET", ws_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "WORKING_SET", ws_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     auto mixed_reqs = Workloads::generate_mixed(NUM_REQUESTS);
     benchmark_single_caches(csv_file, "MIXED", mixed_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "MIXED", mixed_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "MIXED", mixed_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     auto random_reqs = Workloads::generate_random(NUM_REQUESTS, 150, 42);
     benchmark_single_caches(csv_file, "RANDOM", random_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "RANDOM", random_reqs, L1_CAP, L2_CAP);
+    benchmark_all_multi(csv_file, "RANDOM", random_reqs, L1_CAP, L2_CAP, L3_CAP);
 
     csv_file.close();
     std::cout << "Benchmarks completed successfully! Saved to " << out_filename << "\n";
