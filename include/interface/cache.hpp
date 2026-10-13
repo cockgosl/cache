@@ -13,6 +13,5 @@
 #include "cache_algo/lirs_cache.hpp"
 
 int cache_start(int argc, char* argv[]);
-size_t run_simulation(size_t capacity, std::istream& is);
 
 #endif // CACHE_HPP
