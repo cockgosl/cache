@@ -1,13 +1,14 @@
 #ifndef CACHE_API
 #define CACHE_API
 
-#include "cache.hpp"
 #include <memory>
 #include <unordered_map>
 #include <vector>
 #include <cstddef>
 #include <iostream>
 #include <random>
+
+#include "cache_interface.hpp"
 
 template <typename KeyT = int, typename ValueT = int>
 class multi_cache_t {

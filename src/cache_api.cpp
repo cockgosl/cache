@@ -1,12 +1,16 @@
-#include "cache.hpp"
 #include "cache_api.hpp"
+
+#include "LRUCache.hpp"
+#include "LFUCache.hpp"
+#include "2QCache.hpp"
+#include "ARCCache.hpp"
+#include "LIRSCache.hpp"
+
+#include <cstdlib>
+#include <exception>
 #include <fstream>
-#include <sstream>
-#include <vector>
-#include <unordered_set>
-#include <iomanip>
-#include <string>
 #include <iostream>
+#include <string>
 
 void run_simulation(multi_cache_t<int, int>& cache, std::istream& is) {
     int page_key = 0;

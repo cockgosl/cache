@@ -24,6 +24,10 @@ GTEST_LIBS = -lgtest -lgtest_main -pthread
 BENCH_SRC = benchmarks/benchmark.cpp
 BENCH_OUT = $(OUT_O_DIR)/benchmark
 
+CACHE_HEADERS = $(wildcard include/cache/*.hpp) \
+                include/cache.hpp \
+                include/cache_api.hpp
+
 # Объявление всех псевдоцелей
 .PHONY: all test test-filter benchmark benchmarks clean
 
@@ -60,9 +64,9 @@ benchmarks: benchmark
 
 benchmark: $(BENCH_OUT)
 
-$(BENCH_OUT): $(BENCH_SRC)
+$(BENCH_OUT): $(BENCH_SRC) $(CACHE_HEADERS)
 	@mkdir -p $(OUT_O_DIR)
-	$(CXX) $(CXXFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $(BENCH_SRC) -o $@
 
 clean:
 	rm -rf $(OUT_O_DIR)
