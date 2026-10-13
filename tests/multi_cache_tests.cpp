@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
-#include "cache_api.hpp"
+#include "interface/cache_api.hpp"
+#include "cache_algo/lru_cache.hpp"
 
 TEST(MultiCache, MissLoadsFromSlowMemory)
 {

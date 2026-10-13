@@ -1,7 +1,7 @@
 #ifndef LIRS_CACHE_HPP
 #define LIRS_CACHE_HPP
 
-#include "cache_interface.hpp"
+#include "interface/cache_interface.hpp"
 
 #include <iostream>
 #include <list>

@@ -1,50 +1,45 @@
 ifeq ($(origin CXX), default)
-	CXX = g++
+    CXX = g++
 endif
 
 CXXFLAGS ?= -g -O2 -fsanitize=address -Wall -Wextra -std=c++17
+
 OUT_O_DIR ?= build
 COMMONINC = -I./include
-SRC = src
-ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 override CXXFLAGS += $(COMMONINC)
 
+# Main application
 CXXSRC = src/main.cpp src/cache_api.cpp
 CXXOBJ := $(addprefix $(OUT_O_DIR)/,$(CXXSRC:.cpp=.o))
-DEPS = $(CXXOBJ:.o=.d)
+DEPS := $(CXXOBJ:.o=.d)
 
-# Тесты
+# Tests
 TEST_DIR = tests
 TEST_BIN = $(OUT_O_DIR)/cache_tests
 TEST_SRC = $(wildcard $(TEST_DIR)/*_tests.cpp)
+TEST_OBJ := $(addprefix $(OUT_O_DIR)/,$(TEST_SRC:.cpp=.o))
+TEST_DEPS := $(TEST_OBJ:.o=.d)
 GTEST_LIBS = -lgtest -lgtest_main -pthread
 
-# Бенчмарки
+# Benchmarks
 BENCH_SRC = benchmarks/benchmark.cpp
 BENCH_OUT = $(OUT_O_DIR)/benchmark
+BENCH_OBJ = $(OUT_O_DIR)/benchmarks/benchmark.o
+BENCH_DEPS = $(BENCH_OBJ:.o=.d)
 
-CACHE_HEADERS = $(wildcard include/cache/*.hpp) \
-                include/cache.hpp \
-                include/cache_api.hpp
-
-# Объявление всех псевдоцелей
 .PHONY: all test test-filter benchmark benchmarks clean
 
 all: $(OUT_O_DIR)/out
 
-$(OUT_O_DIR)/out : $(CXXOBJ)
+# Main application
+$(OUT_O_DIR)/out: $(CXXOBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(CXXOBJ) : $(OUT_O_DIR)/%.o : %.cpp
+# Compile source files and generate dependencies
+$(OUT_O_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(DEPS) : $(OUT_O_DIR)/%.d : %.cpp
-	@mkdir -p $(@D)
-	$(CXX) -E $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@
-
--include $(DEPS)
+	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 # Tests
 test: $(TEST_BIN)
@@ -53,20 +48,22 @@ test: $(TEST_BIN)
 test-filter: $(TEST_BIN)
 	./$(TEST_BIN) --gtest_filter="$(FILTER)"
 
-$(TEST_BIN): $(TEST_SRC)
-	$(CXX) $(CXXFLAGS) $(COMMONINC) $(TEST_SRC) $(GTEST_LIBS) -o $@
+$(TEST_BIN): $(TEST_OBJ)
+	$(CXX) $(CXXFLAGS) $^ $(GTEST_LIBS) -o $@ $(LDFLAGS)
 
 # Benchmarks
-benchmarks: benchmark
+benchmark: $(BENCH_OUT)
+
+benchmarks: $(BENCH_OUT)
 	./$(BENCH_OUT)
 	@echo "Generating plots..."
 	python3 benchmarks/plot_benchmarks.py
 
-benchmark: $(BENCH_OUT)
+$(BENCH_OUT): $(BENCH_OBJ)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(BENCH_OUT): $(BENCH_SRC) $(CACHE_HEADERS)
-	@mkdir -p $(OUT_O_DIR)
-	$(CXX) $(CXXFLAGS) $(BENCH_SRC) -o $@
+# Include generated dependencies
+-include $(DEPS) $(TEST_DEPS) $(BENCH_DEPS)
 
 clean:
 	rm -rf $(OUT_O_DIR)

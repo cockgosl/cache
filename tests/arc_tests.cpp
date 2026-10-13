@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "cache.hpp"
+#include "interface/cache.hpp"
 
 TEST(ARCCache, InsertAndLookup)
 {

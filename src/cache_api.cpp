@@ -1,10 +1,10 @@
-#include "cache_api.hpp"
+#include "interface/cache_api.hpp"
 
-#include "LRUCache.hpp"
-#include "LFUCache.hpp"
-#include "2QCache.hpp"
-#include "ARCCache.hpp"
-#include "LIRSCache.hpp"
+#include "cache_algo/lru_cache.hpp"
+#include "cache_algo/lfu_cache.hpp"
+#include "cache_algo/two_q_cache.hpp"
+#include "cache_algo/arc_cache.hpp"
+#include "cache_algo/lirs_cache.hpp"
 
 #include <cstdlib>
 #include <exception>

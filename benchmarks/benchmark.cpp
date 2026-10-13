@@ -1,5 +1,5 @@
-#include "cache.hpp"
-#include "cache_api.hpp"
+#include "interface/cache.hpp"
+#include "interface/cache_api.hpp"
 
 #include <iostream>
 #include <fstream>
