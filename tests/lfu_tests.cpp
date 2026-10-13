@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "cache.hpp"
+#include "interface/cache.hpp"
 
 TEST(LFUCache, InsertAndLookup)
 {
@@ -126,13 +126,13 @@ TEST(LFUCache, FrequentlyUsedKeyIsNotEvicted)
 
     int value;
 
-    // Увеличиваем частоту ключа 1:
+    // increase the frequency of the key 1:
     // 1 -> freq 3
     cache.lookup(1, value);
     cache.lookup(1, value);
 
-    // 2 остаётся с freq 1
-    // Добавляем новый ключ — должен вытесниться 2
+    // 2 is with the freq = 1
+    // 2 is to be evicted
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "cache.hpp"
+#include "interface/cache.hpp"
 
 TEST(TwoQCache, LookupMissingKey)
 {
@@ -28,19 +28,19 @@ TEST(TwoQCache, LookupUpdatesMainRecency)
     cache.insert(4, 400);
     cache.lookup(4, value);
 
-    // Сейчас MAIN:
+    // in MAIN:
     // 4 -> 3 -> 2 -> 1
 
     cache.lookup(1, value);
 
-    // Теперь MAIN:
+    // now MAIN:
     // 1 -> 4 -> 3 -> 2
 
     auto victim = cache.insert(5, 500);
 
     ASSERT_TRUE(victim.has_value());
 
-    // Должен уйти самый старый элемент MAIN — 2.
+    // the oldest element of MAIN — 2.
     EXPECT_EQ(victim->first, 2);
     EXPECT_EQ(victim->second, 200);
 }

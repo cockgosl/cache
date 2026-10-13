@@ -20,22 +20,42 @@
 
 ## Структура проекта
 
-    .
-    ├── include/
-    │   ├── cache.hpp
-    │   └── cache_api.hpp
-    ├── src/
-    │   ├── cache_api.cpp
-    │   └── main.cpp
-    ├── benchmarks/
-    │   ├── benchmark.cpp
-    │   ├── plot_benchmarks.py
-    │   ├── benchmarks.csv
-    │   └── plots/
-    ├── txt/
-    │   └── input.txt
-    ├── Makefile
-    └── README.md
+cache/
+├── benchmarks/
+│   ├── benchmark.cpp
+│   ├── benchmarks.csv
+│   ├── plot_benchmarks.py
+│   ├── plots/
+│   └── readme.md
+│
+├── include/
+│   ├── cache_algo/
+│   │   ├── arc_cache.hpp
+│   │   ├── lfu_cache.hpp
+│   │   ├── lirs_cache.hpp
+│   │   ├── lru_cache.hpp
+│   │   └── two_q_cache.hpp
+│   │
+│   └── interface/
+│       ├── cache.hpp
+│       ├── cache_api.hpp
+│       └── cache_interface.hpp
+│
+├── src/
+│   ├── cache_api.cpp
+│   └── main.cpp
+│
+├── tests/
+│   ├── 2q_tests.cpp
+│   ├── arc_tests.cpp
+│   ├── lfu_tests.cpp
+│   ├── lirs_tests.cpp
+│   ├── lru_tests.cpp
+│   └── multi_cache_tests.cpp
+│
+├── Makefile
+├── readme.md
+└── .gitignore
 
 ## Сборка
 
