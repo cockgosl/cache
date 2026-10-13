@@ -20,6 +20,7 @@
 
 ## Структура проекта
 
+```text
 cache/
 ├── benchmarks/
 │   ├── benchmark.cpp
@@ -27,7 +28,6 @@ cache/
 │   ├── plot_benchmarks.py
 │   ├── plots/
 │   └── readme.md
-│
 ├── include/
 │   ├── cache_algo/
 │   │   ├── arc_cache.hpp
@@ -35,16 +35,13 @@ cache/
 │   │   ├── lirs_cache.hpp
 │   │   ├── lru_cache.hpp
 │   │   └── two_q_cache.hpp
-│   │
 │   └── interface/
 │       ├── cache.hpp
 │       ├── cache_api.hpp
 │       └── cache_interface.hpp
-│
 ├── src/
 │   ├── cache_api.cpp
 │   └── main.cpp
-│
 ├── tests/
 │   ├── 2q_tests.cpp
 │   ├── arc_tests.cpp
@@ -52,10 +49,10 @@ cache/
 │   ├── lirs_tests.cpp
 │   ├── lru_tests.cpp
 │   └── multi_cache_tests.cpp
-│
 ├── Makefile
 ├── readme.md
 └── .gitignore
+```
 
 ## Сборка
 
