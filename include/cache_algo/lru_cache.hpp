@@ -13,18 +13,17 @@
 template <typename KeyT = int, typename ValueT = int>
 class lru_cache_t : public cache_interface<KeyT, ValueT> {
 private:
-    size_t capacity_;                          // Максимальная емкость кэша
+    size_t capacity_;                        
 
     struct Node {
         KeyT key;
         ValueT value;
     };
-    std::list<Node> cache_;                    // Двусвязный список (порядок использования)
-    using ListIt = typename std::list<Node>::iterator; // Псевдоним типа итератора
-    std::unordered_map<KeyT , ListIt> hash_;    // Хэш-таблица: Ключ -> Итератор узла в списке
+    std::list<Node> cache_;                  
+    using ListIt = typename std::list<Node>::iterator; 
+    std::unordered_map<KeyT , ListIt> hash_; 
 
 public:
-    // Конструктор инициализации емкости
     explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
     bool lookup(const KeyT& key, ValueT& value) override {
@@ -47,13 +46,13 @@ public:
             return std::nullopt;
         }
 
-        // Добавляем новый элемент в начало
+        // add new element in the begining  
         cache_.push_front({key, value});
 
-        // Запоминаем его итератор в hash_
+        // put it in hash_
         hash_[key] = cache_.begin();
 
-        // Если кеш заполнен — удаляем самый старый элемент
+        // if cache is filled - evict the last
         if (cache_.size() > capacity_) {
             auto last = std::prev(cache_.end());
             std::pair<KeyT, ValueT> victim = {

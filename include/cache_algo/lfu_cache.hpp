@@ -12,10 +12,9 @@
 template <typename KeyT = int, typename ValueT = int>
 class lfu_cache_t : public cache_interface<KeyT, ValueT> {
 private:
-    size_t capacity_;  // Емкость кэша
-    size_t min_freq_;  // Минимальная текущая частота элементов
+    size_t capacity_;  // capacity
+    size_t min_freq_;  // minimal frequency
 
-    // Структура узла хранения ключа и его частоты
     struct Node {
         KeyT key;
         ValueT value;
@@ -23,8 +22,8 @@ private:
     };
 
     using ListIt = typename std::list<Node>::iterator;
-    std::unordered_map<KeyT, ListIt> key_map_;             // Ключ -> Итератор узла
-    std::unordered_map<size_t, std::list<Node>> freq_map_; // Частота -> Список узлов с этой частотой
+    std::unordered_map<KeyT, ListIt> key_map_;            
+    std::unordered_map<size_t, std::list<Node>> freq_map_; // frequency -> list of nodes with this frequency
 
 public:
     explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {}
@@ -38,7 +37,7 @@ public:
             value = node_it->value;
             size_t freq = node_it->freq;
 
-            // Удаляем элемент из текущей группы частоты
+            // delete the element from this frequency group
             freq_map_[freq].erase(node_it);
             if (freq_map_[freq].empty()) {
                 freq_map_.erase(freq);
@@ -47,7 +46,7 @@ public:
                 }
             }
 
-            // Переносим элемент в группу с увеличенной частотой (freq + 1)
+            // move the element in the group with (freq + 1) frequency
             freq_map_[freq + 1].push_front({key, value, freq + 1});
             key_map_[key] = freq_map_[freq + 1].begin();
 
@@ -67,7 +66,6 @@ public:
         freq_map_[1].push_front({key, value, 1});
         key_map_[key] = freq_map_[1].begin();
 
-        // Устанавливаем min_freq_ = 1 ДО проверки на вытеснение
         min_freq_ = 1;
 
         std::optional<std::pair<KeyT, ValueT>> victim;

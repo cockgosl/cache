@@ -65,7 +65,6 @@ public:
     }
 
     bool request_exclusive(const KeyT& key, ValueT& value) {
-        // Ищем страницу начиная с L1
         for (size_t i = 0; i < caches_.size(); i++) {
 
             if (caches_[i]->lookup(key, value)) {
@@ -75,12 +74,11 @@ public:
                     return true;
                 }
 
-                // Страница была найдена на уровне i.
-                // Убираем её оттуда.
+                // page was found on the level i.
+                // delere it from there.
                 caches_[i]->erase(key);
 
-                // Страница найдена на уровне i.
-                // перемещаем в L1(все вытесненные пойдут вниз)
+                // move it in L1(all evictions are going down)
                 insert_exclusive(0, key, value);
                 return true;
             }
@@ -89,9 +87,9 @@ public:
 
         value = slow_get_page(key);
 
-        // Загружаем её в L1.
-        // Если L1 переполнен, вытесненный элемент
-        // автоматически пойдёт в L2, затем при необходимости в L3.
+        // load it in L1.
+        // if L1 is filled
+        // it will be moved in L2, if needed in L3.
         insert_exclusive(0, key, value);
 
         return false;
@@ -104,7 +102,7 @@ public:
                 if (i == 0) {
                     return true;
                 }
-                // как минимум нужно обновить данные
+                // at least renew the data
                 insert_inclusive(0, key, value);
                 return true;
             }
@@ -146,7 +144,7 @@ public:
         return caches_.size();
     }
 
-    // распечатка информации о первых amount кешах
+    // print stats about the first "amount" 
     void print_cache(size_t amount) const {
         if (amount > caches_.size()) {
             std::cout << "incorrect amount of caches\n";

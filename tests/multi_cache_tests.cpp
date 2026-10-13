@@ -39,7 +39,7 @@ TEST(MultiCache, VictimPropagatesThroughLevels)
 
     // L1: 3
     // L2: 2
-    // 1 вытеснена из L2
+    // 1 is evicted L2
 
     int value;
 
@@ -66,8 +66,6 @@ TEST(MultiCache, ThreeLevels)
     cache.request_exclusive(2, v2);
     cache.request_exclusive(3, v3);
 
-    // После этого:
-    //
     // L1: 3
     // L2: 2
     // L3: 1
@@ -92,10 +90,10 @@ TEST(MultiCache, VictimMovesToSecondLevel)
     EXPECT_FALSE(cache.request_exclusive(1, value1));
     EXPECT_FALSE(cache.request_exclusive(2, value2));
 
-    // L1 заполнен. 1 будет вытеснена в L2.
+    // L1 is filled. 1 is to be evicted in L2.
     EXPECT_FALSE(cache.request_exclusive(3, value3));
 
-    // 1 теперь должна находиться в L2.
+    // 1 is to be in L2.
     int restored;
 
     EXPECT_TRUE(cache.request_exclusive(1, restored));

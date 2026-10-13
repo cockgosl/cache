@@ -25,12 +25,12 @@ private:
         ValueT value;
     };
 
-    std::list<KeyT> S_; // Стек S
-    std::list<KeyT> Q_; // Очередь Q
+    std::list<KeyT> S_; // stack S
+    std::list<KeyT> Q_; // que Q
     std::unordered_map<KeyT, BlockInfo> hash_;
     size_t lir_count_ = 0;
 
-    // Очистка низа стека S от не-LIR элементов
+    // clear the bottom of S from non LIR elements
     void prune_stack() {
         while (!S_.empty()) {
             KeyT k = S_.back();
@@ -71,7 +71,7 @@ public:
                 info.stack_it = S_.begin();
                 info.in_stack = true;
 
-                if (was_in_stack) { // Переводим HIR -> LIR
+                if (was_in_stack) { // HIR -> LIR
                     info.status = LIR;
                     Q_.erase(info.q_it);
 
@@ -105,8 +105,8 @@ public:
 
         std::optional<std::pair<KeyT, ValueT>> victim;
 
-        // Если физический кеш заполнен,
-        // вытесняем самый старый HIR_RES
+        // if cache is filled,
+        // evict the last HIR_RES
         if (lir_count_ + Q_.size() >= capacity_) {
             if (!Q_.empty()) {
                 KeyT victim_key = Q_.back();
@@ -122,21 +122,21 @@ public:
         }
 
         // HIR_NON_RES:
-        // ключ известен LIRS, но физически отсутствует в кеше
+        // the key is LIRS, but it's not in cache
         if (hit != hash_.end() && hit->second.status == HIR_NON_RES) {
 
             BlockInfo& info = hit->second;
             info.value = value;
             bool was_in_stack = info.in_stack;
-            // Элемент всё ещё находится в стеке S
+            // it's in S
             if (was_in_stack) {
                 S_.splice(S_.begin(), S_, info.stack_it);
 
                 info.stack_it = S_.begin();
                 info.status = LIR;
 
-                // Количество LIR не меняется:
-                // старый LIR станет HIR_RES
+                // the amount of LIR is not changed:
+                // the old LIR becomes HIR_RES
                 prune_stack();
 
                 KeyT bottom_lir = S_.back();
@@ -147,7 +147,7 @@ public:
                 hash_[bottom_lir].q_it = Q_.begin();
             }
 
-            // Элемент уже был удалён из стека S
+            // the element was deleted from S
             else {
                 S_.push_front(key);
 
@@ -163,19 +163,17 @@ public:
             return victim;
         }
 
-        // ============================================================================
-        // НОВЫЙ КЛЮЧ
-        // ============================================================================
+        //New key
         BlockInfo info;
         info.value = value;
 
-        // Есть место среди LIR
+        // there is space for a new LIR
         if (lir_count_ < lir_cap_) {
             info.status = LIR;
             ++lir_count_;
         }
 
-        // LIR уже заполнены → новый элемент HIR_RES
+        // there is no space → HIR_RES
         else {
             info.status = HIR_RES;
 
@@ -183,7 +181,7 @@ public:
             info.q_it = Q_.begin();
         }
 
-        // Добавляем элемент в стек S
+        // add the element in S
         S_.push_front(key);
 
         info.stack_it = S_.begin();
@@ -203,22 +201,22 @@ public:
         }
         BlockInfo& info = it->second;
 
-        // HIR_NON_RES физически уже не находится в кеше.
+        // HIR_NON_RES is already not in cache.
         if (info.status == HIR_NON_RES) {
             return;
         }
-        // Удаляем из S_
+        // evict from S_
         if (info.in_stack) {
             S_.erase(info.stack_it);
             info.in_stack = false;
         }
 
-        // HIR_RES дополнительно находится в Q_
+        // HIR_RES is in Q_
         if (info.status == HIR_RES) {
             Q_.erase(info.q_it);
         }
 
-        // Если удаляем LIR, уменьшаем количество LIR
+        // reduce the amount of LIR
         if (info.status == LIR) {
             --lir_count_;
         }

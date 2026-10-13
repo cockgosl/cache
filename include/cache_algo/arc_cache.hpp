@@ -14,21 +14,21 @@
 template <typename KeyT = int, typename ValueT = int>
 class arc_cache_t : public cache_interface<KeyT, ValueT> {
 private:
-    size_t c_; // Емкость
-    size_t p_; // Динамический параметр разделения ресурсов
+    size_t c_; // capacity 
+    size_t p_; // dynamic parameter
 
     struct Node {
         KeyT key;
         ValueT value;
     };
-    std::list<Node> t1_, t2_; // основные (t1, t2)
-    std::list<KeyT> b1_, b2_; // и фантомные списки истории (b1, b2)
+    std::list<Node> t1_, t2_; // main (t1, t2)
+    std::list<KeyT> b1_, b2_; // ghost (b1, b2)
     using TListIt = typename std::list<Node>::iterator;
     using BListIt = typename std::list<KeyT>::iterator;
     using ListIt = std::variant<TListIt, BListIt>;
     std::unordered_map<KeyT, std::pair<ListIt, char>> hash_; // '1':t1, '2':t2, 'a':b1, 'b':b2
 
-    // Вспомогательный метод вытеснения
+    // helping eviction method
     std::optional<std::pair<KeyT, ValueT>> replace(bool in_b2) {
         if (t1_.empty() && t2_.empty()) {
             return std::nullopt;
@@ -81,7 +81,7 @@ public:
         std::optional<std::pair<KeyT, ValueT>> victim;
         auto hit = hash_.find(key);
 
-        // 1. HIT в T1 или T2
+        // 1. HIT in T1 or T2
         if (hit != hash_.end() && (hit->second.second == '1' || hit->second.second == '2')) {
             auto node_it = std::get<TListIt>(hit->second.first);
             node_it->value = value;
@@ -94,7 +94,7 @@ public:
             return std::nullopt;
         }
 
-        // 2. HIT в истории B1
+        // 2. HIT in B1
         if (hit != hash_.end() && hit->second.second == 'a') {
             size_t ratio = b1_.empty() ? 1 : (b2_.size() / b1_.size());
             size_t step = ratio > 0 ? ratio : 1;
@@ -111,7 +111,7 @@ public:
             return victim;
         }
 
-        // 3. HIT в истории B2
+        // 3. HIT in B2
         if (hit != hash_.end() && hit->second.second == 'b') {
             size_t ratio = b2_.empty() ? 1 : (b1_.size() / b2_.size());
             size_t step = ratio > 0 ? ratio : 1;
@@ -132,7 +132,7 @@ public:
             return victim;
         }
 
-        // 4. Полный MISS
+        // 4. full MISS
         if (t1_.size() + b1_.size() >= c_) {
             if (t1_.size() < c_) {
                 if (!b1_.empty()) {

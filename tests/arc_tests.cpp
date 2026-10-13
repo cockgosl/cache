@@ -110,14 +110,14 @@ TEST(ARCCache, B1HitIncreasesP)
     cache.insert(1, 100);
     cache.insert(2, 200);
 
-    // 1 вытесняется из T1 в B1
+    // 1 is evicted from T1 in B1
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());
     EXPECT_EQ(victim->first, 1);
 
-    // 1 теперь находится в B1
-    // ARC должен увеличить p и вернуть 1 в T2
+    // 1 is in B1
+    // p is to be increased and 1 is to be moved in T2
     victim = cache.insert(1, 111);
 
     ASSERT_TRUE(victim.has_value());
@@ -140,18 +140,18 @@ TEST(ARCCache, B2HitDecreasesP)
     // 1 -> B1
     cache.insert(3, 300);
 
-    // B1 hit: p увеличивается до 1
+    // B1 hit: p is increased
     cache.insert(1, 111);
 
-    // Теперь 2 вытесняется из T2 -> B2
+    // 2 is evicted: T2 -> B2
     auto victim = cache.insert(4, 400);
 
     ASSERT_TRUE(victim.has_value());
     EXPECT_EQ(victim->first, 1);
     EXPECT_EQ(victim->second, 111);
 
-    // 1 здесь уже в B2.
-    // B2 hit должен уменьшить p.
+    // 1 is in B2.
+    // B2 hit reduces p.
     victim = cache.insert(1, 222);
 
     ASSERT_TRUE(victim.has_value());
@@ -168,13 +168,13 @@ TEST(ARCCache, Erase)
 
     int value;
 
-    // Элемент в T1
+    // T1
     cache.insert(1, 100);
     cache.erase(1);
 
     EXPECT_FALSE(cache.lookup(1, value));
 
-    // Элемент переводим в T2
+    // move it in T2
     cache.insert(2, 200);
     cache.lookup(2, value);
 
