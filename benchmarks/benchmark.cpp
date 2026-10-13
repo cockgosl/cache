@@ -13,11 +13,11 @@
 #include <memory>
 
 
-// ИДЕАЛЬНЫЙ АЛГОРИТМ БЕЛАДИ (Belady's OPT)
+// (Belady's OPT)
 size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     if (capacity == 0 || requests.empty()) return 0;
 
-    size_t n = requests.size();
+    size_t n = requests.size(); //the amount of requests
     std::vector<size_t> next_pos(n, n + 1);
     std::unordered_map<int, size_t> last_seen;
 
@@ -40,7 +40,8 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
         if (it != cache.end()) {
             hits++;
             it->second = next_occ;
-        } else {
+        } 
+        else {
             if (cache.size() >= capacity) {
                 int victim_key = -1;
                 size_t furthest = 0;
@@ -50,7 +51,7 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
                         victim_key = c_key;
                     }
                 }
-                if (victim_key != -1) cache.erase(victim_key);
+                cache.erase(victim_key);
             }
             cache[key] = next_occ;
         }
@@ -58,50 +59,89 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     return hits;
 }
 
-// ГЕНЕРАТОРЫ НАГРУЗОК
+// Workload generator 
 namespace Workloads {
     std::vector<int> generate_loop(size_t num_requests, size_t set_size) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
-        for (size_t i = 0; i < num_requests; ++i) reqs.push_back(static_cast<int>(i % set_size));
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
+        for (size_t i = 0; i < num_requests; ++i) {
+            reqs.push_back(static_cast<int>(i % set_size));
+        }
         return reqs;
     }
     std::vector<int> generate_scan(size_t num_requests) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
-        for (size_t i = 0; i < num_requests; ++i) reqs.push_back(static_cast<int>(i));
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
+        for (size_t i = 0; i < num_requests; ++i) {
+            reqs.push_back(static_cast<int>(i));
+        }
         return reqs;
     }
     std::vector<int> generate_hot_cold(size_t num_requests, size_t hot_count = 10, size_t cold_count = 1000, double hot_prob = 0.8) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
         std::mt19937 gen(42);
         std::bernoulli_distribution is_hot(hot_prob);
+
         std::uniform_int_distribution<int> hot_dist(1, static_cast<int>(hot_count));
         std::uniform_int_distribution<int> cold_dist(static_cast<int>(hot_count + 1), static_cast<int>(hot_count + cold_count));
-        for (size_t i = 0; i < num_requests; ++i) reqs.push_back(is_hot(gen) ? hot_dist(gen) : cold_dist(gen));
+
+        for (size_t i = 0; i < num_requests; ++i) {
+            if (is_hot(gen)) {
+                reqs.push_back(hot_dist(gen));
+            }
+            else {
+                reqs.push_back(cold_dist(gen));
+            }
+        }
         return reqs;
     }
     std::vector<int> generate_working_set(size_t num_requests, size_t set_size = 20, size_t shift_interval = 200) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
         std::mt19937 gen(42);
         int offset = 0;
+
         for (size_t i = 0; i < num_requests; ++i) {
-            if (i > 0 && i % shift_interval == 0) offset += static_cast<int>(set_size / 2);
+            if (i > 0 && i % shift_interval == 0) {
+                offset += static_cast<int>(set_size / 2);
+            }
+
             std::uniform_int_distribution<int> dist(offset, offset + static_cast<int>(set_size) - 1);
             reqs.push_back(dist(gen));
         }
         return reqs;
     }
     std::vector<int> generate_mixed(size_t num_requests) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
         std::mt19937 gen(42);
+
         for (size_t i = 0; i < num_requests; ) {
             int phase = gen() % 3;
             size_t len = std::min<size_t>(100, num_requests - i);
             if (phase == 0) {
-                for (size_t j = 0; j < len; ++j) reqs.push_back(static_cast<int>(j % 15));
-            } else if (phase == 1) {
+                for (size_t j = 0; j < len; ++j) {
+                    reqs.push_back(static_cast<int>(j % 15));
+                }
+            } 
+            else if (phase == 1) {
                 std::uniform_int_distribution<int> dist(1, 100);
-                for (size_t j = 0; j < len; ++j) reqs.push_back(dist(gen) <= 80 ? dist(gen) % 5 : dist(gen));
-            } else {
+                for (size_t j = 0; j < len; ++j) {
+                    if (dist(gen) <= 80) {
+                        reqs.push_back(dist(gen) % 5);
+                    }
+                    else {
+                        reqs.push_back(dist(gen));
+                    }
+                }
+            } 
+            else {
                 std::uniform_int_distribution<int> dist(1, 300);
                 for (size_t j = 0; j < len; ++j) reqs.push_back(dist(gen));
             }
@@ -110,15 +150,20 @@ namespace Workloads {
         return reqs;
     }
     std::vector<int> generate_random(size_t num_requests, size_t key_range = 200, uint32_t seed = 42) {
-        std::vector<int> reqs; reqs.reserve(num_requests);
+        std::vector<int> reqs;
+        reqs.reserve(num_requests);
+
         std::mt19937 gen(seed);
         std::uniform_int_distribution<int> dist(1, static_cast<int>(key_range));
-        for (size_t i = 0; i < num_requests; ++i) reqs.push_back(dist(gen));
+
+        for (size_t i = 0; i < num_requests; ++i) {
+            reqs.push_back(dist(gen));
+        }
         return reqs;
     }
 }
 
-// Запись строки в CSV
+// write a row in CSV file
 
 void write_csv_row(
     std::ostream& os,
@@ -160,11 +205,13 @@ void write_csv_row(
        << "\n";
 }
 
-// ТЕСТИРОВАНИЕ ОДИНОЧНЫХ КЭШЕЙ
+// one level run 
 template <typename CacheT>
 size_t run_single_cache(size_t capacity, const std::vector<int>& requests) {
     CacheT cache(capacity);
-    size_t hits = 0; int dummy_val = 0;
+    size_t hits = 0;
+    int dummy_val = 0;
+
     for (int key : requests) {
         if (cache.lookup(key, dummy_val)) hits++;
         else cache.insert(key, key * 10);
@@ -176,6 +223,7 @@ void benchmark_single_caches(std::ostream& os, const std::string& wl_name, const
     size_t ideal_hits = belady_opt_hits(capacity, requests);
     size_t num_reqs = requests.size();
 
+    // [&] is because os is not copyable
     auto test = [&](const std::string& name, size_t hits) {
         write_csv_row(os, wl_name, name, capacity, 0, 0, "Single", hits, ideal_hits, num_reqs);
     };
@@ -189,7 +237,7 @@ void benchmark_single_caches(std::ostream& os, const std::string& wl_name, const
 
 using CacheFactory = std::function <std::unique_ptr<cache_interface<int, int>>(size_t)>;
 
-// ТЕСТИРОВАНИЕ МНОГОУРОВНЕВОГО КЭША
+// multi level run 
 void run_multi2(
     std::ostream& os,
     const std::string& wl,
@@ -199,8 +247,8 @@ void run_multi2(
     size_t l2,
     bool inclusive,
     const CacheFactory& factory1,
-    const CacheFactory& factory2) {
-
+    const CacheFactory& factory2) 
+{
     multi_cache_t<int, int> cache;
 
     cache.add_cache(factory1(l1));
@@ -445,7 +493,7 @@ int main() {
         return 1;
     }
 
-    // Заголовок CSV
+    // head of the CSV
     csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,L3_Capacity,"
       "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
       "L1_Hits,L2_Hits,L3_Hits\n";   
