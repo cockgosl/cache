@@ -49,7 +49,7 @@ cache/
 │   ├── lirs_tests.cpp
 │   ├── lru_tests.cpp
 │   └── multi_cache_tests.cpp
-├── Makefile
+├── CMakeLists.txt
 ├── readme.md
 └── .gitignore
 ```
