@@ -56,13 +56,79 @@ cache/
 
 ## Сборка
 
-Для сборки проекта используется `Makefile`.
+### Требования
 
-    make
+- Компилятор C++ с поддержкой C++17 (например, GCC или Clang).
+- CMake версии 3.16 или новее.
+- Google Test для сборки и запуска тестов.
+- Python 3 и Matplotlib для построения графиков бенчмарков.
 
-Для удаления файлов сборки:
+### Настройка и сборка
 
-    make clean
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+### Запуск приложения
+
+Исполняемый файл приложения находится по пути `build/cache_app`.
+
+```bash
+./build/cache_app
+```
+
+### Запуск тестов
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+### Очистка
+
+Чтобы удалить скомпилированные файлы:
+
+```bash
+cmake --build build --target clean
+```
+
+Чтобы полностью удалить каталог сборки вместе с конфигурацией CMake:
+
+```bash
+rm -rf build
+```
+
+## Бенчмарки
+
+### Запуск
+
+```bash
+cmake --build build --target benchmarks
+```
+
+Эта команда запускает бенчмарк, сохраняет результаты в `benchmarks/benchmarks.csv` и строит графики с помощью `benchmarks/plot_benchmarks.py`.
+
+### Python-зависимости
+
+Для построения графиков активируй виртуальное окружение и установи Matplotlib:
+
+```bash
+source .venv/bin/activate
+python -m pip install matplotlib
+```
+
+Если виртуальное окружение ещё не создано:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install matplotlib
+```
+
+### Результаты
+
+- `benchmarks/benchmarks.csv` — результаты измерений.
+- `benchmarks/plots/` — каталог с построенными графиками.
 
 ## Запуск симулятора
 
@@ -304,14 +370,6 @@ cache/
 
 Для исследования производительности реализована отдельная система бенчмарков.
 
-Основной файл:
-
-    benchmarks/benchmark.cpp
-
-Для запуска бенчмарков используется:
-
-    make benchmarks
-
 Рассматриваются:
 
 - одноуровневые кеши;
@@ -330,10 +388,6 @@ cache/
     MIXED
     RANDOM
 
-Результаты сохраняются в:
-
-    benchmarks/benchmarks.csv
-
 CSV содержит информацию о:
 
 - конфигурации кеша;
@@ -344,39 +398,6 @@ CSV содержит информацию о:
 - результате Belady;
 - эффективности;
 - количестве попаданий на каждом уровне.
-
-
-## Построение графиков
-
-Для построения графиков используется:
-
-    benchmarks/plot_benchmarks.py
-
-Полный запуск бенчмарков выполняется командой:
-
-    make benchmarks
-
-Графики сохраняются в:
-
-    benchmarks/plots/
-
-Основные графики:
-
-    single_cache_comparison.png
-
-    top_10_two_level_exclusive.png
-    top_10_two_level_inclusive.png
-
-    top_10_three_level_exclusive.png
-    top_10_three_level_inclusive.png
-
-    all_2_level_exclusive.png
-    all_2_level_inclusive.png
-
-    all_3_level_exclusive.png
-    all_3_level_inclusive.png
-
-Для многоуровневых конфигураций графики показывают вклад L1, L2 и L3 относительно результата Belady.
 
 ## Результаты исследования
 

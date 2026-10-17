@@ -9,6 +9,7 @@ compile_commands.json
 
 #txt
 *.txt
+!CMakeLists.txt
 
 # Clangd cache
 .cache/
