@@ -11,9 +11,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Common compiler warnings
 add_library(cache INTERFACE)
 target_compile_options(cache INTERFACE
-    $<$<OR:$<CXX_COMPILER_ID:GNU>,
-            $<CXX_COMPILER_ID:Clang>,
-            $<CXX_COMPILER_ID:AppleClang>>:-Wall -Wextra>
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall -Wextra>
 )
 target_include_directories(cache INTERFACE include)
 

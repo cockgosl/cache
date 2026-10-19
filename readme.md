@@ -21,6 +21,7 @@ A C++ cache simulator implementing five eviction algorithms and multi-level cach
 ## Project Structure
 
 To view the project structure, run the command:
+
 ```bash
 tree -I build
 ```
@@ -32,42 +33,15 @@ tree -I build
 - A C++ compiler supporting C++17 (e.g., GCC or Clang).
 - CMake version 3.16 or newer.
 - Google Test for building and running tests.
-- To plot graphs, install the necessary dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-### Setup and Build
-
-```bash
-cmake -S . -B build
-cmake --build build
-```
+- To plot graphs, install the dependencies written in requirements.txt:
 
 ### Running the Application
 
 The application executable is located at `build/cache_app`.
 
-```bash
-./build/cache_app
-```
-
-### Running Tests
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
 ## Benchmarks
 
 ### Execution
-
-```bash
-cmake --build build --target benchmarks
-```
-
-This command runs the benchmark, saves the results to `benchmarks/benchmarks.csv`, and generates plots using `benchmarks/plot_benchmarks.py`.
 
 ### Python Dependencies
 
@@ -97,13 +71,7 @@ By default, the program uses the file:
 
     txt/input.txt
 
-Execution:
-
-    ./build/cache
-
 You can also provide a custom input file:
-
-    ./build/cache path/to/input.txt
 
 ## Input File Format
 
@@ -128,14 +96,6 @@ In this example, a three-level cache is created:
     L1: LRU  — capacity 10
     L2: ARC  — capacity 20
     L3: LIRS — capacity 30
-
-Supported algorithms:
-
-    lru
-    lfu
-    2q
-    arc
-    lirs
 
 The cache capacity must be positive.
 
@@ -215,7 +175,7 @@ If a page is evicted from a lower level, the corresponding copies of this page i
 
 Evicts the page that has not been used for the longest time.
 
-https://algomaster.io/learn/system-design/cache-eviction-policies
+https://dev.to/abdullahyasir/understanding-lru-cache-efficient-data-storage-and-retrieval-2jnc
 
 ### LFU
 
@@ -223,7 +183,7 @@ https://algomaster.io/learn/system-design/cache-eviction-policies
 
 Evicts the page with the lowest access frequency.
 
-https://algomaster.io/learn/system-design/cache-eviction-policies
+https://www.geeksforgeeks.org/dsa/least-frequently-used-lfu-cache-implementation/
 
 ### 2Q
 
@@ -231,15 +191,28 @@ https://algomaster.io/learn/system-design/cache-eviction-policies
 
 Uses multiple queues to separate recently added pages from frequently used pages.
 
+https://arpitbhayani.me/blogs/2q-cache/
+
+https://www.vldb.org/conf/1994/P439.PDF
+
 ### ARC
 
 **Adaptive Replacement Cache**
 
 Adaptively balances between recently used and frequently used pages.
 
+https://www.mydreams.cz/en/hosting-wiki/11161-arc-cache-advanced-memory-management-in-zfs.html
+
+https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
+
+
 ### LIRS
 
 **Low Inter-reference Recency Set**
+
+https://ranger.uta.edu/~sjiang/pubs/papers/jiang02_LIRS.pdf
+
+https://redis.io/glossary/lru-cache/
 
 Uses information about the distance between page accesses to determine which pages should be retained in the cache.
 
