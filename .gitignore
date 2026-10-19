@@ -10,6 +10,7 @@ compile_commands.json
 #txt
 *.txt
 !CMakeLists.txt
+!requirements.txt
 
 # Clangd cache
 .cache/
