@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "interface/cache.hpp"
+#include "cache_algo/lru_cache.hpp"
 
 TEST(LRUCache, InsertAndLookup)
 {

@@ -20,7 +20,6 @@ target_include_directories(cache INTERFACE include)
 # Main application
 add_executable(cache_app
     src/main.cpp
-    src/cache_api.cpp
 )
 
 target_link_libraries(cache_app PRIVATE cache)

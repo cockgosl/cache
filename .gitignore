@@ -19,3 +19,7 @@ compile_commands.json
 
 # VS Code
 .vscode/
+
+#other
+*.swp
+*.patch

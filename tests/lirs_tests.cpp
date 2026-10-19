@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "interface/cache.hpp"
+#include "cache_algo/lirs_cache.hpp"
 
 TEST(LIRSCache, InsertAndLookup)
 {

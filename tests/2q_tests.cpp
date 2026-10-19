@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "interface/cache.hpp"
+#include "cache_algo/two_q_cache.hpp"
 
 TEST(TwoQCache, LookupMissingKey)
 {

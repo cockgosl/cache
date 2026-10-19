@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
-#include "interface/cache.hpp"
-
+#include "cache_algo/lfu_cache.hpp"
 TEST(LFUCache, InsertAndLookup)
 {
     lfu_cache_t<int, int> cache(2);
