@@ -2,12 +2,13 @@
 #include "interface/cache_api.hpp"
 #include "cache_algo/lru_cache.hpp"
 
-TEST(MultiCache, MissLoadsFromSlowMemory)
-{
+TEST(MultiCache, MissLoadsFromSlowMemory) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(2);
 
+    // Assert
     int value;
 
     EXPECT_FALSE(cache.request_exclusive(1, value));
@@ -18,8 +19,8 @@ TEST(MultiCache, MissLoadsFromSlowMemory)
     EXPECT_EQ(value, expected);
 }
 
-TEST(MultiCache, VictimPropagatesThroughLevels)
-{
+TEST(MultiCache, VictimPropagatesThroughLevels) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(1);
@@ -29,18 +30,13 @@ TEST(MultiCache, VictimPropagatesThroughLevels)
     int v2;
     int v3;
 
+    // Act
     cache.request_exclusive(1, v1);
     cache.request_exclusive(2, v2);
 
-    // L1: 2
-    // L2: 1
-
     cache.request_exclusive(3, v3);
 
-    // L1: 3
-    // L2: 2
-    // 1 is evicted L2
-
+    // Assert
     int value;
 
     EXPECT_TRUE(cache.request_exclusive(2, value));
@@ -50,8 +46,8 @@ TEST(MultiCache, VictimPropagatesThroughLevels)
     EXPECT_EQ(value, v1);
 }
 
-TEST(MultiCache, ThreeLevels)
-{
+TEST(MultiCache, ThreeLevels) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(1);
@@ -61,7 +57,8 @@ TEST(MultiCache, ThreeLevels)
     int v1;
     int v2;
     int v3;
-
+    
+    // Act
     cache.request_exclusive(1, v1);
     cache.request_exclusive(2, v2);
     cache.request_exclusive(3, v3);
@@ -70,14 +67,15 @@ TEST(MultiCache, ThreeLevels)
     // L2: 2
     // L3: 1
 
+    // Assert
     int value;
 
     EXPECT_TRUE(cache.request_exclusive(1, value));
     EXPECT_EQ(value, v1);
 }
 
-TEST(MultiCache, VictimMovesToSecondLevel)
-{
+TEST(MultiCache, VictimMovesToSecondLevel) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(2);
@@ -86,6 +84,8 @@ TEST(MultiCache, VictimMovesToSecondLevel)
     int value1;
     int value2;
     int value3;
+
+    // Assert
 
     EXPECT_FALSE(cache.request_exclusive(1, value1));
     EXPECT_FALSE(cache.request_exclusive(2, value2));
@@ -100,27 +100,29 @@ TEST(MultiCache, VictimMovesToSecondLevel)
     EXPECT_EQ(restored, value1);
 }
 
-TEST(MultiCache, WorksWithoutCaches)
-{
+TEST(MultiCache, WorksWithoutCaches) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     int value1;
     int value2;
 
+    // Assert
     EXPECT_FALSE(cache.request_exclusive(1, value1));
     EXPECT_FALSE(cache.request_exclusive(1, value2));
 
     EXPECT_EQ(value1, value2);
 }
 
-TEST(MultiCacheInclusive, MissLoadsPageIntoAllLevels)
-{
+TEST(MultiCacheInclusive, MissLoadsPageIntoAllLevels) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(2);
     cache.add_cache<lru_cache_t<int, int>>(3);
     cache.add_cache<lru_cache_t<int, int>>(4);
 
+    // Assert
     int value;
 
     EXPECT_FALSE(cache.request_inclusive(1, value));
@@ -132,8 +134,8 @@ TEST(MultiCacheInclusive, MissLoadsPageIntoAllLevels)
 }
 
 
-TEST(MultiCacheInclusive, HitInLowerLevelKeepsPageInHierarchy)
-{
+TEST(MultiCacheInclusive, HitInLowerLevelKeepsPageInHierarchy) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(1);
@@ -142,9 +144,11 @@ TEST(MultiCacheInclusive, HitInLowerLevelKeepsPageInHierarchy)
     int value1;
     int value2;
 
+    // Act
     cache.request_inclusive(1, value1);
     cache.request_inclusive(2, value2);
 
+    // Assert
     int value;
 
     EXPECT_TRUE(cache.request_inclusive(1, value));
@@ -156,8 +160,8 @@ TEST(MultiCacheInclusive, HitInLowerLevelKeepsPageInHierarchy)
 }
 
 
-TEST(MultiCacheInclusive, EvictionInvalidatesUpperLevel)
-{
+TEST(MultiCacheInclusive, EvictionInvalidatesUpperLevel) {
+    // Assign
     multi_cache_t<int, int> cache;
 
     cache.add_cache<lru_cache_t<int, int>>(2);
@@ -167,10 +171,12 @@ TEST(MultiCacheInclusive, EvictionInvalidatesUpperLevel)
     int value2;
     int value3;
 
+    // Act
     cache.request_inclusive(1, value1);
     cache.request_inclusive(2, value2);
     cache.request_inclusive(3, value3);
 
+    // Assert
     int value;
 
     // Page 1 must be absent from L1 if it was evicted from L2.

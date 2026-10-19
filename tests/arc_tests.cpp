@@ -1,31 +1,35 @@
 #include <gtest/gtest.h>
 #include "cache_algo/arc_cache.hpp"
 
-TEST(ARCCache, InsertAndLookup)
-{
+TEST(ARCCache, InsertAndLookup) {
+    // Assign
     arc_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     int value;
 
     EXPECT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 100);
 }
 
-TEST(ARCCache, LookupMissingKey)
-{
+TEST(ARCCache, LookupMissingKey) {
+    // Assign
     arc_cache_t<int, int> cache(4);
 
+    // Assert
     int value;
 
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(ARCCache, LookupMovesFromT1ToT2)
-{
+TEST(ARCCache, LookupMovesFromT1ToT2) {
+    // Assign
     arc_cache_t<int, int> cache(2);
 
+    // Act
     int value;
 
     cache.insert(1, 100);
@@ -33,6 +37,7 @@ TEST(ARCCache, LookupMovesFromT1ToT2)
 
     cache.lookup(1, value);
 
+    // Assert
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());
@@ -44,12 +49,13 @@ TEST(ARCCache, LookupMovesFromT1ToT2)
     EXPECT_EQ(value, 100);
 }
 
-TEST(ARCCache, LookupUpdatesT2Recency)
-{
+TEST(ARCCache, LookupUpdatesT2Recency) {
+    // Assign
     arc_cache_t<int, int> cache(2);
 
     int value;
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
@@ -58,10 +64,9 @@ TEST(ARCCache, LookupUpdatesT2Recency)
     cache.insert(3, 300);
     cache.lookup(3, value);
 
-    // T2: [3, 1]
     cache.lookup(1, value);
 
-    // T2: [1, 3]
+    // Assert
     auto victim = cache.insert(4, 400);
 
     ASSERT_TRUE(victim.has_value());
@@ -70,12 +75,14 @@ TEST(ARCCache, LookupUpdatesT2Recency)
     EXPECT_EQ(victim->second, 300);
 }
 
-TEST(ARCCache, UpdateExistingKey)
-{
+TEST(ARCCache, UpdateExistingKey) {
+    // Assign
     arc_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     auto victim = cache.insert(1, 200);
 
     EXPECT_FALSE(victim.has_value());
@@ -86,15 +93,17 @@ TEST(ARCCache, UpdateExistingKey)
     EXPECT_EQ(value, 200);
 }
 
-TEST(ARCCache, EvictsFromT1)
-{
+TEST(ARCCache, EvictsFromT1) {
+    // Assign
     arc_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
     cache.insert(3, 300);
     cache.insert(4, 400);
 
+    // Assert
     auto victim = cache.insert(5, 500);
 
     ASSERT_TRUE(victim.has_value());
@@ -103,21 +112,20 @@ TEST(ARCCache, EvictsFromT1)
     EXPECT_EQ(victim->second, 100);
 }
 
-TEST(ARCCache, B1HitIncreasesP)
-{
+TEST(ARCCache, B1HitIncreasesP) {
+    // Assign
     arc_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
-    // 1 is evicted from T1 in B1
+    // Assert
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());
     EXPECT_EQ(victim->first, 1);
 
-    // 1 is in B1
-    // p is to be increased and 1 is to be moved in T2
     victim = cache.insert(1, 111);
 
     ASSERT_TRUE(victim.has_value());
@@ -130,28 +138,25 @@ TEST(ARCCache, B1HitIncreasesP)
     EXPECT_EQ(value, 111);
 }
 
-TEST(ARCCache, B2HitDecreasesP)
-{
+TEST(ARCCache, B2HitDecreasesP) {
+    // Assign
     arc_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
-    // 1 -> B1
     cache.insert(3, 300);
 
-    // B1 hit: p is increased
     cache.insert(1, 111);
 
-    // 2 is evicted: T2 -> B2
+    // Assert
     auto victim = cache.insert(4, 400);
 
     ASSERT_TRUE(victim.has_value());
     EXPECT_EQ(victim->first, 1);
     EXPECT_EQ(victim->second, 111);
 
-    // 1 is in B2.
-    // B2 hit reduces p.
     victim = cache.insert(1, 222);
 
     ASSERT_TRUE(victim.has_value());
@@ -162,19 +167,19 @@ TEST(ARCCache, B2HitDecreasesP)
     EXPECT_EQ(value, 222);
 }
 
-TEST(ARCCache, Erase)
-{
+TEST(ARCCache, Erase) {
+    // Assign
     arc_cache_t<int, int> cache(4);
 
     int value;
 
-    // T1
+    // Act
     cache.insert(1, 100);
     cache.erase(1);
 
+    // Assert
     EXPECT_FALSE(cache.lookup(1, value));
 
-    // move it in T2
     cache.insert(2, 200);
     cache.lookup(2, value);
 

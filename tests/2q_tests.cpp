@@ -1,21 +1,23 @@
 #include <gtest/gtest.h>
 #include "cache_algo/two_q_cache.hpp"
 
-TEST(TwoQCache, LookupMissingKey)
-{
+TEST(TwoQCache, LookupMissingKey) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
     int value;
 
+    // Assert
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(TwoQCache, LookupUpdatesMainRecency)
-{
+TEST(TwoQCache, LookupUpdatesMainRecency) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
     int value;
-
+    
+    // Act
     cache.insert(1, 100);
     cache.lookup(1, value);
 
@@ -28,29 +30,25 @@ TEST(TwoQCache, LookupUpdatesMainRecency)
     cache.insert(4, 400);
     cache.lookup(4, value);
 
-    // in MAIN:
-    // 4 -> 3 -> 2 -> 1
-
     cache.lookup(1, value);
 
-    // now MAIN:
-    // 1 -> 4 -> 3 -> 2
-
+    // Assert
     auto victim = cache.insert(5, 500);
 
     ASSERT_TRUE(victim.has_value());
 
-    // the oldest element of MAIN — 2.
     EXPECT_EQ(victim->first, 2);
     EXPECT_EQ(victim->second, 200);
 }
 
-TEST(TwoQCache, UpdateExistingKey)
-{
+TEST(TwoQCache, UpdateExistingKey) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     auto victim = cache.insert(1, 200);
 
     EXPECT_FALSE(victim.has_value());
@@ -60,13 +58,15 @@ TEST(TwoQCache, UpdateExistingKey)
     EXPECT_EQ(value, 200);
 }
 
-TEST(TwoQCache, UpdateExistingKeyWhenFull)
-{
+TEST(TwoQCache, UpdateExistingKeyWhenFull) {
+    // Assign
     two_q_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
+    // Assert
     auto victim = cache.insert(1, 111);
 
     EXPECT_FALSE(victim.has_value());
@@ -80,24 +80,28 @@ TEST(TwoQCache, UpdateExistingKeyWhenFull)
     EXPECT_EQ(value, 200);
 }
 
-TEST(TwoQCache, EraseFromIn)
-{
+TEST(TwoQCache, EraseFromIn) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
     cache.erase(1);
 
+    // Assert
     int value;
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(TwoQCache, EraseFromMain)
-{
+TEST(TwoQCache, EraseFromMain) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     int value;
     EXPECT_TRUE(cache.lookup(1, value));
 
@@ -106,29 +110,33 @@ TEST(TwoQCache, EraseFromMain)
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(TwoQCache, EraseMissingKey)
-{
+TEST(TwoQCache, EraseMissingKey) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
 
     cache.erase(2);
 
+    // Assert
     int value;
 
     EXPECT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 100);
 }
 
-TEST(TwoQCache, EvictsOldestFromIn)
-{
+TEST(TwoQCache, EvictsOldestFromIn) {
+    // Assign
     two_q_cache_t<int, int> cache(4);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
     cache.insert(3, 300);
     cache.insert(4, 400);
 
+    // Assert
     auto victim = cache.insert(5, 500);
 
     ASSERT_TRUE(victim.has_value());

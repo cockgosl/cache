@@ -1,33 +1,38 @@
 #include <gtest/gtest.h>
 #include "cache_algo/lfu_cache.hpp"
-TEST(LFUCache, InsertAndLookup)
-{
+TEST(LFUCache, InsertAndLookup) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     int value = 0;
 
     EXPECT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 100);
 }
 
-TEST(LFUCache, LookupMissingKey)
-{
+TEST(LFUCache, LookupMissingKey) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Assert
     int value = 0;
 
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(LFUCache, LookupIncreasesFrequency)
-{
+TEST(LFUCache, LookupIncreasesFrequency) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
+    // Assert
     int value = 0;
 
     ASSERT_TRUE(cache.lookup(1, value));
@@ -40,28 +45,32 @@ TEST(LFUCache, LookupIncreasesFrequency)
     EXPECT_EQ(victim->second, 200);
 }
 
-TEST(LFUCache, UpdateExistingKey)
-{
+TEST(LFUCache, UpdateExistingKey) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(1, 200);
 
+    // Assert
     int value = 0;
 
     ASSERT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 200);
 }
 
-TEST(LFUCache, Erase)
-{
+TEST(LFUCache, Erase) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
     cache.erase(1);
 
+    // Assert
     int value = 0;
 
     EXPECT_FALSE(cache.lookup(1, value));
@@ -70,27 +79,31 @@ TEST(LFUCache, Erase)
     EXPECT_EQ(value, 200);
 }
 
-TEST(LFUCache, EraseMissingKey)
-{
+TEST(LFUCache, EraseMissingKey) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
 
     cache.erase(2);
 
+    // Assert
     int value = 0;
 
     EXPECT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 100);
 }
 
-TEST(LFUCache, EvictsOldestAmongEqualFrequencies)
-{
+TEST(LFUCache, EvictsOldestAmongEqualFrequencies) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
+    // Assert
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());
@@ -98,12 +111,14 @@ TEST(LFUCache, EvictsOldestAmongEqualFrequencies)
     EXPECT_EQ(victim->second, 100);
 }
 
-TEST(LFUCache, CapacityOne)
-{
+TEST(LFUCache, CapacityOne) {
+    // Assign
     lfu_cache_t<int, int> cache(1);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     auto victim = cache.insert(2, 200);
 
     ASSERT_TRUE(victim.has_value());
@@ -116,22 +131,20 @@ TEST(LFUCache, CapacityOne)
     EXPECT_EQ(value, 200);
 }
 
-TEST(LFUCache, FrequentlyUsedKeyIsNotEvicted)
-{
+TEST(LFUCache, FrequentlyUsedKeyIsNotEvicted) {
+    // Assign
     lfu_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
     int value;
 
-    // increase the frequency of the key 1:
-    // 1 -> freq 3
     cache.lookup(1, value);
     cache.lookup(1, value);
 
-    // 2 is with the freq = 1
-    // 2 is to be evicted
+    // Assert
     auto victim = cache.insert(3, 300);
 
     ASSERT_TRUE(victim.has_value());

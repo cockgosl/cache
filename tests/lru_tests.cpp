@@ -1,34 +1,39 @@
 #include <gtest/gtest.h>
 #include "cache_algo/lru_cache.hpp"
 
-TEST(LRUCache, InsertAndLookup)
-{
+TEST(LRUCache, InsertAndLookup) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     int value = 0;
 
     EXPECT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 100);
 }
 
-TEST(LRUCache, LookupMissingKey)
-{
+TEST(LRUCache, LookupMissingKey) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Assert
     int value = 0;
 
     EXPECT_FALSE(cache.lookup(1, value));
 }
 
-TEST(LRUCache, EvictsLeastRecentlyUsed)
-{
+TEST(LRUCache, EvictsLeastRecentlyUsed) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
+    // Assert
     int value = 0;
 
     ASSERT_TRUE(cache.lookup(1, value));
@@ -44,25 +49,29 @@ TEST(LRUCache, EvictsLeastRecentlyUsed)
     EXPECT_FALSE(cache.lookup(2, value));
 }
 
-TEST(LRUCache, UpdateExistingKey)
-{
+TEST(LRUCache, UpdateExistingKey) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(1, 200);
 
+    // Assert
     int value = 0;
 
     ASSERT_TRUE(cache.lookup(1, value));
     EXPECT_EQ(value, 200);
 }
 
-TEST(LRUCache, CapacityOne)
-{
+TEST(LRUCache, CapacityOne) {
+    // Assign
     lru_cache_t<int, int> cache(1);
 
+    // Act
     cache.insert(1, 100);
 
+    // Assert
     auto victim = cache.insert(2, 200);
 
     ASSERT_TRUE(victim.has_value());
@@ -76,13 +85,15 @@ TEST(LRUCache, CapacityOne)
     EXPECT_EQ(value, 200);
 }
 
-TEST(LRUCache, LookupUpdatesRecency)
-{
+TEST(LRUCache, LookupUpdatesRecency) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
+    // Assert
     int value = 0;
 
     ASSERT_TRUE(cache.lookup(1, value));
@@ -94,15 +105,17 @@ TEST(LRUCache, LookupUpdatesRecency)
     EXPECT_EQ(victim->second, 200);
 }
 
-TEST(LRUCache, Erase)
-{
+TEST(LRUCache, Erase) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
     cache.erase(1);
 
+    // Assert
     int value = 0;
 
     EXPECT_FALSE(cache.lookup(1, value));
@@ -110,14 +123,16 @@ TEST(LRUCache, Erase)
     EXPECT_EQ(value, 200);
 }
 
-TEST(LRUCache, EraseMissingKey)
-{
+TEST(LRUCache, EraseMissingKey) {
+    // Assign
     lru_cache_t<int, int> cache(2);
 
+    // Act
     cache.insert(1, 100);
 
     cache.erase(2);
 
+    // Assert
     int value = 0;
 
     EXPECT_TRUE(cache.lookup(1, value));
