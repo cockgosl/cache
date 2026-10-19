@@ -16,8 +16,6 @@
 #include <functional>
 #include <memory>
 
-
-// (Belady's OPT)
 size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     if (capacity == 0 || requests.empty()) return 0;
 

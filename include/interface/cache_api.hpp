@@ -10,7 +10,7 @@
 
 #include "cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class multi_cache_t {
 private:
     std::vector< std::unique_ptr<cache_interface<KeyT, ValueT>> > caches_;

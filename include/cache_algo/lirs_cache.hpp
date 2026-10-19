@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lirs_cache_t : public cache_interface<KeyT, ValueT> {
 private:
     size_t capacity_;

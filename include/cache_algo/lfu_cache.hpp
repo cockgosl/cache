@@ -9,7 +9,7 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lfu_cache_t : public cache_interface<KeyT, ValueT> {
 private:
     size_t capacity_;  // capacity
@@ -22,6 +22,7 @@ private:
     };
 
     using ListIt = typename std::list<Node>::iterator;
+
     std::unordered_map<KeyT, ListIt> key_map_;            
     std::unordered_map<size_t, std::list<Node>> freq_map_; // frequency -> list of nodes with this frequency
 

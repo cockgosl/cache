@@ -10,7 +10,7 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lru_cache_t : public cache_interface<KeyT, ValueT> {
 private:
     size_t capacity_;                        
