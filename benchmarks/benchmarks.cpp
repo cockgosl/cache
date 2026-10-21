@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <ranges>
 
 size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     if (capacity == 0 || requests.empty()) return 0;
@@ -23,7 +24,7 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     std::vector<size_t> next_pos(n, n + 1);
     std::unordered_map<int, size_t> last_seen;
 
-    for (int i = static_cast<int>(n) - 1; i >= 0; --i) {
+    for (auto i : std::views::iota(0uz , n) | std::views::reverse) {
         auto it = last_seen.find(requests[i]);
         if (it != last_seen.end()) {
             next_pos[i] = it->second;
@@ -34,29 +35,21 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     std::unordered_map<int, size_t> cache;
     size_t hits = 0;
 
-    for (size_t i = 0; i < n; ++i) {
-        int key = requests[i];
-        size_t next_occ = next_pos[i];
+    for (auto [key, next_occ] : std::views::zip(requests, next_pos)) {
 
         auto it = cache.find(key);
         if (it != cache.end()) {
             hits++;
             it->second = next_occ;
+            continue;
         } 
-        else {
-            if (cache.size() >= capacity) {
-                int victim_key = -1;
-                size_t furthest = 0;
-                for (const auto& [c_key, c_next] : cache) {
-                    if (c_next > furthest) {
-                        furthest = c_next;
-                        victim_key = c_key;
-                    }
-                }
-                cache.erase(victim_key);
-            }
-            cache[key] = next_occ;
+        if (cache.size() >= capacity) {
+            using Pair = decltype(cache)::value_type;
+            auto victim_it = std::ranges::max_element(cache, {}, &Pair::second);
+            cache.erase(victim_it);
+
         }
+        cache[key] = next_occ;
     }
     return hits;
 }
@@ -165,46 +158,60 @@ namespace Workloads {
     }
 }
 
+struct BenchmarkConfig {
+    size_t num_requests = 5000;
+    size_t cache_capacity = 30;
+    size_t l1_capacity = 10;
+    size_t l2_capacity = 20;
+    size_t l3_capacity = 30;
+};
+
+struct BenchmarkResult {
+    size_t hits = 0;
+    size_t ideal_hits = 0;
+    size_t l1_hits = 0;
+    size_t l2_hits = 0;
+    size_t l3_hits = 0;
+};
+
+struct BenchmarkMetadata {
+    std::string workload;
+    std::string algorithm;
+    std::string mode;
+    size_t levels = 1;
+};
+
 // write a row in CSV file
 
-void write_csv_row(
+void write_csv(
     std::ostream& os,
-    const std::string& workload,
-    const std::string& algo,
-    size_t l1_cap,
-    size_t l2_cap,
-    size_t l3_cap,
-    const std::string& mode,
-    size_t hits,
-    size_t ideal_hits,
-    size_t num_reqs,
-    size_t l1_hits = 0,
-    size_t l2_hits = 0,
-    size_t l3_hits = 0)
+    const BenchmarkConfig& config,
+    const BenchmarkMetadata& metadata,
+    const BenchmarkResult& result)
 {
-    double hit_ratio = 100.0 * hits / num_reqs;
+    const double hit_ratio = config.num_requests > 0  ? 100.0 * result.hits / config.num_requests : 0.0;
 
-    double efficiency = 0.0;
+    const double efficiency = result.ideal_hits > 0 ? 100.0 * result.hits / result.ideal_hits : 0.0;
 
-    if (ideal_hits > 0) {
-        efficiency = 100.0 * hits / ideal_hits;
-    }
+    const size_t l1_capacity = metadata.levels == 1 ? config.cache_capacity : config.l1_capacity;
 
-    os << workload << ","
-       << algo << ","
-       << l1_cap << ","
-       << l2_cap << ","
-       << l3_cap << ","
-       << mode << ","
-       << hits << ","
+    const size_t l2_capacity = metadata.levels >= 2 ? config.l2_capacity : 0;
+
+    const size_t l3_capacity = metadata.levels >= 3 ? config.l3_capacity : 0;
+    os << metadata.workload << ','
+       << metadata.algorithm << ','
+       << l1_capacity << ','
+       << l2_capacity << ','
+       << l3_capacity << ','
+       << metadata.mode << ','
+       << result.hits << ','
        << std::fixed << std::setprecision(2)
-       << hit_ratio << ","
-       << ideal_hits << ","
-       << efficiency << ","
-       << l1_hits << ","
-       << l2_hits << ","
-       << l3_hits
-       << "\n";
+       << hit_ratio << ','
+       << result.ideal_hits << ','
+       << efficiency << ','
+       << result.l1_hits << ','
+       << result.l2_hits << ','
+       << result.l3_hits << '\n';
 }
 
 // one level run 
@@ -221,20 +228,41 @@ size_t run_single_cache(size_t capacity, const std::vector<int>& requests) {
     return hits;
 }
 
-void benchmark_single_caches(std::ostream& os, const std::string& wl_name, const std::vector<int>& requests, size_t capacity) {
-    size_t ideal_hits = belady_opt_hits(capacity, requests);
-    size_t num_reqs = requests.size();
+void benchmark_single_caches(
+    std::ostream& os,
+    const std::string& wl_name,
+    const std::vector<int>& requests,
+    const BenchmarkConfig& config)
+{
+    const size_t capacity = config.cache_capacity;
+    const size_t ideal_hits = belady_opt_hits(capacity, requests);
 
-    // [&] is because os is not copyable
     auto test = [&](const std::string& name, size_t hits) {
-        write_csv_row(os, wl_name, name, capacity, 0, 0, "Single", hits, ideal_hits, num_reqs);
+        BenchmarkMetadata metadata{
+            .workload = wl_name,
+            .algorithm = name,
+            .mode = "Single",
+            .levels = 1
+        };
+
+        BenchmarkResult result{
+            .hits = hits,
+            .ideal_hits = ideal_hits
+        };
+
+        write_csv(os, config, metadata, result);
     };
 
-    test("LRU", run_single_cache<lru_cache_t<int, int>>(capacity, requests));
-    test("2Q",  run_single_cache<two_q_cache_t<int, int>>(capacity, requests));
-    test("LFU", run_single_cache<lfu_cache_t<int, int>>(capacity, requests));
-    test("LIRS", run_single_cache<lirs_cache_t<int, int>>(capacity, requests));
-    test("ARC", run_single_cache<arc_cache_t<int, int>>(capacity, requests));
+    test("LRU", run_single_cache<lru_cache_t<int, int>>(
+        capacity, requests));
+    test("2Q", run_single_cache<two_q_cache_t<int, int>>(
+        capacity, requests));
+    test("LFU", run_single_cache<lfu_cache_t<int, int>>(
+        capacity, requests));
+    test("LIRS", run_single_cache<lirs_cache_t<int, int>>(
+        capacity, requests));
+    test("ARC", run_single_cache<arc_cache_t<int, int>>(
+        capacity, requests));
 }
 
 using CacheFactory = std::function <std::unique_ptr<cache_interface<int, int>>(size_t)>;
@@ -245,69 +273,50 @@ void run_multi2(
     const std::string& wl,
     const std::string& algo,
     const std::vector<int>& reqs,
-    size_t l1,
-    size_t l2,
+    const BenchmarkConfig& config,
     bool inclusive,
     const CacheFactory& factory1,
-    const CacheFactory& factory2) 
+    const CacheFactory& factory2)
 {
     multi_cache_t<int, int> cache;
 
-    cache.add_cache(factory1(l1));
-    cache.add_cache(factory2(l2));
+    cache.add_cache(factory1(config.l1_capacity));
+    cache.add_cache(factory2(config.l2_capacity));
 
     size_t hits = 0;
     int value = 0;
 
     for (int key : reqs) {
-        bool hit;
-
-        if (inclusive) {
-            hit = cache.request_inclusive(key, value);
-        } 
-        else {
-            hit = cache.request_exclusive(key, value);
-        }
+        const bool hit = inclusive
+            ? cache.request_inclusive(key, value)
+            : cache.request_exclusive(key, value);
 
         if (hit) {
             ++hits;
         }
     }
 
-    size_t ideal_capacity;
+    const size_t ideal_capacity = inclusive
+        ? config.l2_capacity
+        : config.l1_capacity + config.l2_capacity;
 
-    if (inclusive) {
-        ideal_capacity = l2;
-    } 
-    else {
-        ideal_capacity = l1 + l2;
-    }
+    const size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
 
-    size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
+    BenchmarkMetadata metadata{
+        .workload = wl,
+        .algorithm = algo,
+        .mode = inclusive ? "Inclusive" : "Exclusive",
+        .levels = 2
+    };
 
-    std::string mode;
+    BenchmarkResult result{
+        .hits = hits,
+        .ideal_hits = ideal_hits,
+        .l1_hits = cache.hits(0),
+        .l2_hits = cache.hits(1)
+    };
 
-    if (inclusive) {
-        mode = "Inclusive";
-    } 
-    else {
-        mode = "Exclusive";
-    }
-
-    write_csv_row(
-        os,
-        wl,
-        algo,
-        l1,
-        l2,
-        0,
-        mode,
-        hits,
-        ideal_hits,
-        reqs.size(),
-        cache.hits(0),
-        cache.hits(1)
-    ); 
+    write_csv(os, config, metadata, result);
 }
 
 void run_multi3(
@@ -315,9 +324,7 @@ void run_multi3(
     const std::string& wl,
     const std::string& algo,
     const std::vector<int>& reqs,
-    size_t l1,
-    size_t l2,
-    size_t l3,
+    const BenchmarkConfig& config,
     bool inclusive,
     const CacheFactory& factory1,
     const CacheFactory& factory2,
@@ -325,60 +332,45 @@ void run_multi3(
 {
     multi_cache_t<int, int> cache;
 
-    cache.add_cache(factory1(l1));
-    cache.add_cache(factory2(l2));
-    cache.add_cache(factory3(l3));
+    cache.add_cache(factory1(config.l1_capacity));
+    cache.add_cache(factory2(config.l2_capacity));
+    cache.add_cache(factory3(config.l3_capacity));
 
     size_t hits = 0;
     int value = 0;
 
     for (int key : reqs) {
-        bool hit;
-
-        if (inclusive) {
-            hit = cache.request_inclusive(key, value);
-        } else {
-            hit = cache.request_exclusive(key, value);
-        }
+        const bool hit = inclusive
+            ? cache.request_inclusive(key, value)
+            : cache.request_exclusive(key, value);
 
         if (hit) {
             ++hits;
         }
     }
 
-    size_t ideal_capacity;
+    const size_t ideal_capacity = inclusive
+        ? config.l3_capacity
+        : config.l1_capacity + config.l2_capacity + config.l3_capacity;
 
-    if (inclusive) {
-        ideal_capacity = l3;
-    } else {
-        ideal_capacity = l1 + l2 + l3;
-    }
+    const size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
 
-    size_t ideal_hits = belady_opt_hits(ideal_capacity, reqs);
+    BenchmarkMetadata metadata{
+        .workload = wl,
+        .algorithm = algo,
+        .mode = inclusive ? "Inclusive" : "Exclusive",
+        .levels = 3
+    };
 
-    std::string mode;
+    BenchmarkResult result{
+        .hits = hits,
+        .ideal_hits = ideal_hits,
+        .l1_hits = cache.hits(0),
+        .l2_hits = cache.hits(1),
+        .l3_hits = cache.hits(2)
+    };
 
-    if (inclusive) {
-        mode = "Inclusive";
-    } 
-    else {
-        mode = "Exclusive";
-    }
-    write_csv_row(
-        os,
-        wl,
-        algo,
-        l1,
-        l2,
-        l3,
-        mode,
-        hits,
-        ideal_hits,
-        reqs.size(),
-        cache.hits(0),
-        cache.hits(1),
-        cache.hits(2)
-    );
+    write_csv(os, config, metadata, result);
 }
 
 const std::vector<std::pair<std::string, CacheFactory>> cache_factories = {
@@ -412,76 +404,33 @@ void benchmark_all_multi(
     std::ostream& os,
     const std::string& wl,
     const std::vector<int>& reqs,
-    size_t l1,
-    size_t l2,
-    size_t l3)
+    const BenchmarkConfig& config)
 {
     for (const auto& cache1 : cache_factories) {
         for (const auto& cache2 : cache_factories) {
-            std::string algo =
+            const std::string algo =
                 cache1.first + "+" + cache2.first;
 
-            run_multi2(
-                os,
-                wl,
-                algo,
-                reqs,
-                l1,
-                l2,
-                true,
-                cache1.second,
-                cache2.second
-            );
+            run_multi2(os, wl, algo, reqs, config, true,
+                       cache1.second, cache2.second);
 
-            run_multi2(
-                os,
-                wl,
-                algo,
-                reqs,
-                l1,
-                l2,
-                false,
-                cache1.second,
-                cache2.second
-            );
+            run_multi2(os, wl, algo, reqs, config, false,
+                       cache1.second, cache2.second);
         }
     }
 
     for (const auto& cache1 : cache_factories) {
         for (const auto& cache2 : cache_factories) {
             for (const auto& cache3 : cache_factories) {
-                std::string algo =
-                    cache1.first + "+" +
-                    cache2.first + "+" +
+                const std::string algo =
+                    cache1.first + "+" + cache2.first + "+" +
                     cache3.first;
 
-                run_multi3(
-                    os,
-                    wl,
-                    algo,
-                    reqs,
-                    l1,
-                    l2,
-                    l3,
-                    true,
-                    cache1.second,
-                    cache2.second,
-                    cache3.second
-                );
+                run_multi3(os, wl, algo, reqs, config, true,
+                           cache1.second, cache2.second, cache3.second);
 
-                run_multi3(
-                    os,
-                    wl,
-                    algo,
-                    reqs,
-                    l1,
-                    l2,
-                    l3,
-                    false,
-                    cache1.second,
-                    cache2.second,
-                    cache3.second
-                );
+                run_multi3(os, wl, algo, reqs, config, false,
+                           cache1.second, cache2.second, cache3.second);
             }
         }
     }
@@ -497,39 +446,41 @@ int main() {
 
     // head of the CSV
     csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,L3_Capacity,"
-      "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
-      "L1_Hits,L2_Hits,L3_Hits\n";   
-    const size_t NUM_REQUESTS = 5000;
-    const size_t CACHE_CAPACITY = 30;
-    const size_t L1_CAP = 10;
-    const size_t L2_CAP = 20;
-    const size_t L3_CAP = 30;
+                "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
+                "L1_Hits,L2_Hits,L3_Hits\n";   
+    const BenchmarkConfig config{
+        .num_requests = 5000,
+        .cache_capacity = 30,
+        .l1_capacity = 10,
+        .l2_capacity = 20,
+        .l3_capacity = 30
+    };
 
     std::cout << "Running benchmarks (CSV output)...\n";
 
-    auto loop_reqs = Workloads::generate_loop(NUM_REQUESTS, 35);
-    benchmark_single_caches(csv_file, "LOOP", loop_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "LOOP", loop_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto loop_reqs = Workloads::generate_loop(config.num_requests, 35);
+    benchmark_single_caches(csv_file, "LOOP", loop_reqs, config);
+    benchmark_all_multi(csv_file, "LOOP", loop_reqs, config);
 
-    auto scan_reqs = Workloads::generate_scan(NUM_REQUESTS);
-    benchmark_single_caches(csv_file, "SCAN", scan_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "SCAN", scan_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto scan_reqs = Workloads::generate_scan(config.num_requests);
+    benchmark_single_caches(csv_file, "SCAN", scan_reqs, config);
+    benchmark_all_multi(csv_file, "SCAN", scan_reqs, config);
 
-    auto hot_cold_reqs = Workloads::generate_hot_cold(NUM_REQUESTS, 15, 500, 0.85);
-    benchmark_single_caches(csv_file, "HOT_COLD", hot_cold_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "HOT_COLD", hot_cold_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto hot_cold_reqs = Workloads::generate_hot_cold(config.num_requests, 15, 500, 0.85);
+    benchmark_single_caches(csv_file, "HOT_COLD", hot_cold_reqs, config);
+    benchmark_all_multi(csv_file, "HOT_COLD", hot_cold_reqs, config);
 
-    auto ws_reqs = Workloads::generate_working_set(NUM_REQUESTS, 25, 250);
-    benchmark_single_caches(csv_file, "WORKING_SET", ws_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "WORKING_SET", ws_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto ws_reqs = Workloads::generate_working_set(config.num_requests, 25, 250);
+    benchmark_single_caches(csv_file, "WORKING_SET", ws_reqs, config);
+    benchmark_all_multi(csv_file, "WORKING_SET", ws_reqs, config);
 
-    auto mixed_reqs = Workloads::generate_mixed(NUM_REQUESTS);
-    benchmark_single_caches(csv_file, "MIXED", mixed_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "MIXED", mixed_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto mixed_reqs = Workloads::generate_mixed(config.num_requests);
+    benchmark_single_caches(csv_file, "MIXED", mixed_reqs, config);
+    benchmark_all_multi(csv_file, "MIXED", mixed_reqs, config);
 
-    auto random_reqs = Workloads::generate_random(NUM_REQUESTS, 150, 42);
-    benchmark_single_caches(csv_file, "RANDOM", random_reqs, CACHE_CAPACITY);
-    benchmark_all_multi(csv_file, "RANDOM", random_reqs, L1_CAP, L2_CAP, L3_CAP);
+    auto random_reqs = Workloads::generate_random(config.num_requests, 150, 42);
+    benchmark_single_caches(csv_file, "RANDOM", random_reqs, config);
+    benchmark_all_multi(csv_file, "RANDOM", random_reqs, config);
 
     csv_file.close();
     std::cout << "Benchmarks completed successfully! Saved to " << out_filename << "\n";
