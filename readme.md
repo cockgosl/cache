@@ -41,25 +41,6 @@ The application executable is located at `build/cache_app`.
 
 ## Benchmarks
 
-### Execution
-
-### Python Dependencies
-
-To plot graphs, activate the virtual environment and install Matplotlib:
-
-```bash
-source .venv/bin/activate
-python -m pip install matplotlib
-```
-
-If the virtual environment has not been created yet:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install matplotlib
-```
-
 ### Results
 
 - `benchmarks/benchmarks.csv` — measurement results.
