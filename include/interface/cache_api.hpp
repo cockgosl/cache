@@ -80,7 +80,8 @@ public:
     bool request_exclusive(const KeyT& key, ValueT& value) {
         for (size_t i = 0; i < caches_.size(); i++) {
 
-            if (caches_[i].cache->lookup(key, value)) {
+            if (auto val = caches_[i].cache->lookup(key)) {
+                value = *val;
                 caches_[i].hits++;
 
                 if (i == 0) {
@@ -110,8 +111,10 @@ public:
 
     bool request_inclusive(const KeyT& key, ValueT& value) {
         for (size_t i = 0; i < caches_.size(); i++) {
-            if (caches_[i].cache->lookup(key, value)) {
+            if (auto val = caches_[i].cache->lookup(key)) {
+                value = *val;
                 caches_[i].hits++;
+
                 if (i == 0) {
                     return true;
                 }
