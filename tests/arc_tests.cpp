@@ -9,10 +9,10 @@ TEST(ARCCache, InsertAndLookup) {
     cache.insert(1, 100);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }
 
 TEST(ARCCache, LookupMissingKey) {
@@ -20,9 +20,9 @@ TEST(ARCCache, LookupMissingKey) {
     arc_cache_t<int, int> cache(4);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(val.has_value());
 }
 
 TEST(ARCCache, LookupMovesFromT1ToT2) {
@@ -30,12 +30,10 @@ TEST(ARCCache, LookupMovesFromT1ToT2) {
     arc_cache_t<int, int> cache(2);
 
     // Act
-    int value;
-
     cache.insert(1, 100);
     cache.insert(2, 200);
 
-    cache.lookup(1, value);
+    cache.lookup(1);
 
     // Assert
     auto victim = cache.insert(3, 300);
@@ -45,26 +43,25 @@ TEST(ARCCache, LookupMovesFromT1ToT2) {
     EXPECT_EQ(victim->first, 2);
     EXPECT_EQ(victim->second, 200);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    auto val1 = cache.lookup(1);
+    EXPECT_TRUE(val1.has_value());
+    EXPECT_EQ(*val1, 100);
 }
 
 TEST(ARCCache, LookupUpdatesT2Recency) {
     // Assign
     arc_cache_t<int, int> cache(2);
 
-    int value;
-
     // Act
     cache.insert(1, 100);
     cache.insert(2, 200);
 
-    cache.lookup(1, value);
+    cache.lookup(1);
 
     cache.insert(3, 300);
-    cache.lookup(3, value);
+    cache.lookup(3);
 
-    cache.lookup(1, value);
+    cache.lookup(1);
 
     // Assert
     auto victim = cache.insert(4, 400);
@@ -87,10 +84,10 @@ TEST(ARCCache, UpdateExistingKey) {
 
     EXPECT_FALSE(victim.has_value());
 
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 200);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 200);
 }
 
 TEST(ARCCache, EvictsFromT1) {
@@ -132,10 +129,10 @@ TEST(ARCCache, B1HitIncreasesP) {
     EXPECT_EQ(victim->first, 2);
     EXPECT_EQ(victim->second, 200);
 
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 111);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 111);
 }
 
 TEST(ARCCache, B2HitDecreasesP) {
@@ -161,29 +158,27 @@ TEST(ARCCache, B2HitDecreasesP) {
 
     ASSERT_TRUE(victim.has_value());
 
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 222);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 222);
 }
 
 TEST(ARCCache, Erase) {
     // Assign
     arc_cache_t<int, int> cache(4);
 
-    int value;
-
     // Act
     cache.insert(1, 100);
     cache.erase(1);
 
     // Assert
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(cache.lookup(1).has_value());
 
     cache.insert(2, 200);
-    cache.lookup(2, value);
+    cache.lookup(2);
 
     cache.erase(2);
 
-    EXPECT_FALSE(cache.lookup(2, value));
+    EXPECT_FALSE(cache.lookup(2).has_value());
 }

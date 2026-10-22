@@ -57,12 +57,12 @@ private:
 public:
     explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {}
 
-    std::optional<ValueT> lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         if (hit != hash_.end() && (hit->second.second == '1' || hit->second.second == '2')) {
             auto node_it = std::get<TListIt>(hit->second.first);
-            value = node_it->value;
+
 
             if (hit->second.second == '1') {
                 t2_.splice(t2_.begin(), t1_, node_it);
@@ -72,7 +72,7 @@ public:
             }
 
             hash_[key] = {t2_.begin(), '2'};
-            return value;
+            return node_it->value;
         }
         return std::nullopt;
     }

@@ -9,10 +9,10 @@ TEST(LRUCache, InsertAndLookup) {
     cache.insert(1, 100);
 
     // Assert
-    int value = 0;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }
 
 TEST(LRUCache, LookupMissingKey) {
@@ -20,9 +20,9 @@ TEST(LRUCache, LookupMissingKey) {
     lru_cache_t<int, int> cache(2);
 
     // Assert
-    int value = 0;
+    auto val = cache.lookup(1);
 
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(val.has_value());
 }
 
 TEST(LRUCache, EvictsLeastRecentlyUsed) {
@@ -34,9 +34,8 @@ TEST(LRUCache, EvictsLeastRecentlyUsed) {
     cache.insert(2, 200);
 
     // Assert
-    int value = 0;
-
-    ASSERT_TRUE(cache.lookup(1, value));
+    auto val1 = cache.lookup(1);
+    ASSERT_TRUE(val1.has_value());
 
     auto victim = cache.insert(3, 300);
 
@@ -44,9 +43,9 @@ TEST(LRUCache, EvictsLeastRecentlyUsed) {
     EXPECT_EQ(victim->first, 2);
     EXPECT_EQ(victim->second, 200);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_TRUE(cache.lookup(3, value));
-    EXPECT_FALSE(cache.lookup(2, value));
+    EXPECT_TRUE(cache.lookup(1).has_value());
+    EXPECT_TRUE(cache.lookup(3).has_value());
+    EXPECT_FALSE(cache.lookup(2).has_value());
 }
 
 TEST(LRUCache, UpdateExistingKey) {
@@ -58,10 +57,10 @@ TEST(LRUCache, UpdateExistingKey) {
     cache.insert(1, 200);
 
     // Assert
-    int value = 0;
+    auto val = cache.lookup(1);
 
-    ASSERT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 200);
+    ASSERT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 200);
 }
 
 TEST(LRUCache, CapacityOne) {
@@ -78,11 +77,10 @@ TEST(LRUCache, CapacityOne) {
     EXPECT_EQ(victim->first, 1);
     EXPECT_EQ(victim->second, 100);
 
-    int value = 0;
-
-    EXPECT_FALSE(cache.lookup(1, value));
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
+    EXPECT_FALSE(cache.lookup(1).has_value());
+    auto val2 = cache.lookup(2);
+    EXPECT_TRUE(val2.has_value());
+    EXPECT_EQ(*val2, 200);
 }
 
 TEST(LRUCache, LookupUpdatesRecency) {
@@ -94,9 +92,7 @@ TEST(LRUCache, LookupUpdatesRecency) {
     cache.insert(2, 200);
 
     // Assert
-    int value = 0;
-
-    ASSERT_TRUE(cache.lookup(1, value));
+    ASSERT_TRUE(cache.lookup(1).has_value());
 
     auto victim = cache.insert(3, 300);
 
@@ -116,11 +112,10 @@ TEST(LRUCache, Erase) {
     cache.erase(1);
 
     // Assert
-    int value = 0;
-
-    EXPECT_FALSE(cache.lookup(1, value));
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
+    EXPECT_FALSE(cache.lookup(1).has_value());
+    auto val2 = cache.lookup(2);
+    EXPECT_TRUE(val2.has_value());
+    EXPECT_EQ(*val2, 200);
 }
 
 TEST(LRUCache, EraseMissingKey) {
@@ -133,8 +128,8 @@ TEST(LRUCache, EraseMissingKey) {
     cache.erase(2);
 
     // Assert
-    int value = 0;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }

@@ -26,7 +26,7 @@ private:
 public:
     explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
-   std::optional<ValueT> lookup(const KeyT& key, ValueT& value) override {
+   std::optional<ValueT> lookup(const KeyT& key) override {
         auto it = hash_.find(key);
 
         if (it == hash_.end()) {

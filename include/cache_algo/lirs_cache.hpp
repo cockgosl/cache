@@ -49,13 +49,13 @@ private:
 
 public:
     explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {}
-    std::optional<ValueT> lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
         if (hit != hash_.end() && hit->second.status != HIR_NON_RES) {
             BlockInfo& info = hit->second;
-            value = info.value;
+
             if (info.status == LIR) {
                 S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
@@ -87,7 +87,7 @@ public:
                     info.q_it = Q_.begin();
                 }
             }
-            return value;
+            return info.value;
         }
         else {
             return std::nullopt;

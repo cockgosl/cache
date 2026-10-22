@@ -57,7 +57,7 @@ TEST(MultiCache, ThreeLevels) {
     int v1;
     int v2;
     int v3;
-    
+
     // Act
     cache.request_exclusive(1, v1);
     cache.request_exclusive(2, v2);

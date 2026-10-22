@@ -30,12 +30,12 @@ private:
 
 public:
     explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {}
-    std::optional<ValueT> lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
         if (hit != hash_.end()) {
-            value = hit->second.first->value;
+
             // if in LRU main_, refresh it's condition'
             if (hit->second.second) {
                 main_.splice(main_.begin(), main_, hit->second.first);
@@ -45,7 +45,7 @@ public:
                 main_.splice(main_.begin(), in_, hit->second.first);
                 hit->second.second = true;
             }
-            return value;
+            return hit->second.first->value;
         }
         else {
             return std::nullopt;

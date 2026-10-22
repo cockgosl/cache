@@ -29,13 +29,13 @@ private:
 public:
     explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {}
 
-    std::optional<ValueT> lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = key_map_.find(key);
 
         // CACHE HIT
         if (hit != key_map_.end()) {
             auto node_it = hit->second;
-            value = node_it->value;
+            ValueT value = node_it->value; // Сохраняем значение заранее
             size_t freq = node_it->freq;
 
             // delete the element from this frequency group
@@ -57,6 +57,7 @@ public:
             return std::nullopt;
         }
     }
+
     std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
         auto it = key_map_.find(key);
         if (it != key_map_.end()) {

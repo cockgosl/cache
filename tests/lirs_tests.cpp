@@ -9,10 +9,10 @@ TEST(LIRSCache, InsertAndLookup) {
     cache.insert(1, 100);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }
 
 TEST(LIRSCache, LookupMissingKey) {
@@ -20,9 +20,9 @@ TEST(LIRSCache, LookupMissingKey) {
     lirs_cache_t<int, int> cache(4);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(val.has_value());
 }
 
 TEST(LIRSCache, UpdateExistingKey) {
@@ -37,10 +37,10 @@ TEST(LIRSCache, UpdateExistingKey) {
 
     EXPECT_FALSE(victim.has_value());
 
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 200);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 200);
 }
 
 TEST(LIRSCache, FirstElementsBecomeLIR) {
@@ -60,16 +60,17 @@ TEST(LIRSCache, FirstElementsBecomeLIR) {
     EXPECT_EQ(victim->first, 4);
     EXPECT_EQ(victim->second, 400);
 
-    int value;
+    auto val1 = cache.lookup(1);
+    EXPECT_TRUE(val1.has_value());
+    EXPECT_EQ(*val1, 100);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    auto val2 = cache.lookup(2);
+    EXPECT_TRUE(val2.has_value());
+    EXPECT_EQ(*val2, 200);
 
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
-
-    EXPECT_TRUE(cache.lookup(3, value));
-    EXPECT_EQ(value, 300);
+    auto val3 = cache.lookup(3);
+    EXPECT_TRUE(val3.has_value());
+    EXPECT_EQ(*val3, 300);
 }
 
 TEST(LIRSCache, HIRHitMovesToLIR) {
@@ -83,10 +84,9 @@ TEST(LIRSCache, HIRHitMovesToLIR) {
     cache.insert(4, 400);
 
     // Assert
-    int value;
-
-    EXPECT_TRUE(cache.lookup(4, value));
-    EXPECT_EQ(value, 400);
+    auto val4 = cache.lookup(4);
+    EXPECT_TRUE(val4.has_value());
+    EXPECT_EQ(*val4, 400);
 
     auto victim = cache.insert(5, 500);
 
@@ -95,23 +95,20 @@ TEST(LIRSCache, HIRHitMovesToLIR) {
     EXPECT_EQ(victim->first, 1);
     EXPECT_EQ(victim->second, 100);
 
-    EXPECT_TRUE(cache.lookup(4, value));
-    EXPECT_EQ(value, 400);
+    EXPECT_TRUE(cache.lookup(4).has_value());
 }
 
 TEST(LIRSCache, EraseLIR) {
     // Assign
     lirs_cache_t<int, int> cache(4);
-    
+
     // Act
     cache.insert(1, 100);
 
     cache.erase(1);
-    
-    // Assert
-    int value;
 
-    EXPECT_FALSE(cache.lookup(1, value));
+    // Assert
+    EXPECT_FALSE(cache.lookup(1).has_value());
 }
 
 TEST(LIRSCache, EraseHIR) {
@@ -127,9 +124,7 @@ TEST(LIRSCache, EraseHIR) {
     cache.erase(4);
 
     // Assert
-    int value;
-
-    EXPECT_FALSE(cache.lookup(4, value));
+    EXPECT_FALSE(cache.lookup(4).has_value());
 }
 
 TEST(LIRSCache, EraseMissingKey) {
@@ -142,8 +137,8 @@ TEST(LIRSCache, EraseMissingKey) {
     cache.erase(2);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }

@@ -70,11 +70,11 @@ private:
 public:
     template <typename Cache>
     void add_cache(size_t capacity) {
-        caches_.push_back({std::make_unique<Cache>(capacity), 0, 0});
+        caches_.emplace_back(std::make_unique<Cache>(capacity), 0, 0);
     }
 
     void add_cache(std::unique_ptr<cache_interface<KeyT, ValueT>> cache) {
-        caches_.push_back({std::move(cache), 0, 0});
+        caches_.emplace_back(std::move(cache), 0, 0);
     }
 
     bool request_exclusive(const KeyT& key, ValueT& value) {

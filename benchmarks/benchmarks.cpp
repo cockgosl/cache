@@ -42,7 +42,7 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
             hits++;
             it->second = next_occ;
             continue;
-        } 
+        }
         if (cache.size() >= capacity) {
             using Pair = decltype(cache)::value_type;
             auto victim_it = std::ranges::max_element(cache, {}, &Pair::second);
@@ -54,7 +54,7 @@ size_t belady_opt_hits(size_t capacity, const std::vector<int>& requests) {
     return hits;
 }
 
-// Workload generator 
+// Workload generator
 namespace Workloads {
     std::vector<int> generate_loop(size_t num_requests, size_t set_size) {
         std::vector<int> reqs;
@@ -124,7 +124,7 @@ namespace Workloads {
                 for (size_t j = 0; j < len; ++j) {
                     reqs.push_back(static_cast<int>(j % 15));
                 }
-            } 
+            }
             else if (phase == 1) {
                 std::uniform_int_distribution<int> dist(1, 100);
                 for (size_t j = 0; j < len; ++j) {
@@ -135,7 +135,7 @@ namespace Workloads {
                         reqs.push_back(dist(gen));
                     }
                 }
-            } 
+            }
             else {
                 std::uniform_int_distribution<int> dist(1, 300);
                 for (size_t j = 0; j < len; ++j) reqs.push_back(dist(gen));
@@ -214,15 +214,14 @@ void write_csv(
        << result.l3_hits << '\n';
 }
 
-// one level run 
+// one level run
 template <typename CacheT>
 size_t run_single_cache(size_t capacity, const std::vector<int>& requests) {
     CacheT cache(capacity);
     size_t hits = 0;
-    int dummy_val = 0;
 
     for (int key : requests) {
-        if (cache.lookup(key, dummy_val)) hits++;
+        if (cache.lookup(key)) hits++;
         else cache.insert(key, key * 10);
     }
     return hits;
@@ -267,7 +266,7 @@ void benchmark_single_caches(
 
 using CacheFactory = std::function <std::unique_ptr<cache_interface<int, int>>(size_t)>;
 
-// multi level run 
+// multi level run
 void run_multi2(
     std::ostream& os,
     const std::string& wl,
@@ -447,7 +446,7 @@ int main() {
     // head of the CSV
     csv_file << "Workload,Algorithm,L1_Capacity,L2_Capacity,L3_Capacity,"
                 "Mode,Hits,Hit_Ratio_Pct,Ideal_Hits,Efficiency_Pct,"
-                "L1_Hits,L2_Hits,L3_Hits\n";   
+                "L1_Hits,L2_Hits,L3_Hits\n";
     const BenchmarkConfig config{
         .num_requests = 5000,
         .cache_capacity = 30,

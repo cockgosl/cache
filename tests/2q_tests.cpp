@@ -5,32 +5,28 @@ TEST(TwoQCache, LookupMissingKey) {
     // Assign
     two_q_cache_t<int, int> cache(4);
 
-    int value;
-
     // Assert
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(cache.lookup(1).has_value());
 }
 
 TEST(TwoQCache, LookupUpdatesMainRecency) {
     // Assign
     two_q_cache_t<int, int> cache(4);
 
-    int value;
-    
     // Act
     cache.insert(1, 100);
-    cache.lookup(1, value);
+    cache.lookup(1);
 
     cache.insert(2, 200);
-    cache.lookup(2, value);
+    cache.lookup(2);
 
     cache.insert(3, 300);
-    cache.lookup(3, value);
+    cache.lookup(3);
 
     cache.insert(4, 400);
-    cache.lookup(4, value);
+    cache.lookup(4);
 
-    cache.lookup(1, value);
+    cache.lookup(1);
 
     // Assert
     auto victim = cache.insert(5, 500);
@@ -53,9 +49,9 @@ TEST(TwoQCache, UpdateExistingKey) {
 
     EXPECT_FALSE(victim.has_value());
 
-    int value;
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 200);
+    auto val = cache.lookup(1);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 200);
 }
 
 TEST(TwoQCache, UpdateExistingKeyWhenFull) {
@@ -71,13 +67,13 @@ TEST(TwoQCache, UpdateExistingKeyWhenFull) {
 
     EXPECT_FALSE(victim.has_value());
 
-    int value;
+    auto val1 = cache.lookup(1);
+    EXPECT_TRUE(val1.has_value());
+    EXPECT_EQ(*val1, 111);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 111);
-
-    EXPECT_TRUE(cache.lookup(2, value));
-    EXPECT_EQ(value, 200);
+    auto val2 = cache.lookup(2);
+    EXPECT_TRUE(val2.has_value());
+    EXPECT_EQ(*val2, 200);
 }
 
 TEST(TwoQCache, EraseFromIn) {
@@ -90,8 +86,7 @@ TEST(TwoQCache, EraseFromIn) {
     cache.erase(1);
 
     // Assert
-    int value;
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(cache.lookup(1).has_value());
 }
 
 TEST(TwoQCache, EraseFromMain) {
@@ -102,12 +97,11 @@ TEST(TwoQCache, EraseFromMain) {
     cache.insert(1, 100);
 
     // Assert
-    int value;
-    EXPECT_TRUE(cache.lookup(1, value));
+    EXPECT_TRUE(cache.lookup(1).has_value());
 
     cache.erase(1);
 
-    EXPECT_FALSE(cache.lookup(1, value));
+    EXPECT_FALSE(cache.lookup(1).has_value());
 }
 
 TEST(TwoQCache, EraseMissingKey) {
@@ -120,10 +114,10 @@ TEST(TwoQCache, EraseMissingKey) {
     cache.erase(2);
 
     // Assert
-    int value;
+    auto val = cache.lookup(1);
 
-    EXPECT_TRUE(cache.lookup(1, value));
-    EXPECT_EQ(value, 100);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, 100);
 }
 
 TEST(TwoQCache, EvictsOldestFromIn) {
