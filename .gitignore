@@ -10,6 +10,7 @@ compile_commands.json
 #txt
 *.txt
 !CMakeLists.txt
+!requirements.txt
 
 # Clangd cache
 .cache/
@@ -19,3 +20,7 @@ compile_commands.json
 
 # VS Code
 .vscode/
+
+#other
+*.swp
+*.patch

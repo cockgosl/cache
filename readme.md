@@ -1,160 +1,70 @@
 # Cache Simulator
 
-Симулятор кешей на C++, реализующий пять алгоритмов вытеснения и многоуровневую организацию кеша.
+A C++ cache simulator implementing five eviction algorithms and multi-level cache organization.
 
-## Возможности
+## Features
 
 - LRU — Least Recently Used
 - LFU — Least Frequently Used
 - 2Q — Two Queues
 - ARC — Adaptive Replacement Cache
 - LIRS — Low Inter-reference Recency Set
-- одноуровневые и многоуровневые кеши
-- произвольное количество уровней кеша
-- Exclusive и Inclusive организация многоуровневого кеша
-- подсчёт `Hits` и `Misses` для каждого уровня
-- моделирование медленной памяти
-- бенчмарки различных конфигураций кеша
-- сравнение с оптимальным алгоритмом Belady
-- построение графиков результатов
+- Single-level and multi-level caches
+- Arbitrary number of cache levels
+- Exclusive and Inclusive multi-level cache organization
+- Counting `Hits` and `Misses` for each level
+- Slow memory modeling
+- Benchmarks for various cache configurations
+- Comparison with the optimal Belady algorithm
+- Plotting the results
 
-## Структура проекта
+## Project Structure
 
-```text
-cache/
-├── benchmarks/
-│   ├── benchmark.cpp
-│   ├── benchmarks.csv
-│   ├── plot_benchmarks.py
-│   ├── plots/
-│   └── readme.md
-├── include/
-│   ├── cache_algo/
-│   │   ├── arc_cache.hpp
-│   │   ├── lfu_cache.hpp
-│   │   ├── lirs_cache.hpp
-│   │   ├── lru_cache.hpp
-│   │   └── two_q_cache.hpp
-│   └── interface/
-│       ├── cache.hpp
-│       ├── cache_api.hpp
-│       └── cache_interface.hpp
-├── src/
-│   ├── cache_api.cpp
-│   └── main.cpp
-├── tests/
-│   ├── 2q_tests.cpp
-│   ├── arc_tests.cpp
-│   ├── lfu_tests.cpp
-│   ├── lirs_tests.cpp
-│   ├── lru_tests.cpp
-│   └── multi_cache_tests.cpp
-├── CMakeLists.txt
-├── readme.md
-└── .gitignore
-```
-
-## Сборка
-
-### Требования
-
-- Компилятор C++ с поддержкой C++17 (например, GCC или Clang).
-- CMake версии 3.16 или новее.
-- Google Test для сборки и запуска тестов.
-- Python 3 и Matplotlib для построения графиков бенчмарков.
-
-### Настройка и сборка
+To view the project structure, run the command:
 
 ```bash
-cmake -S . -B build
-cmake --build build
+tree -I build
 ```
 
-### Запуск приложения
+## Build
 
-Исполняемый файл приложения находится по пути `build/cache_app`.
+### Requirements
 
-```bash
-./build/cache_app
-```
+- A C++ compiler supporting C++17 (e.g., GCC or Clang).
+- CMake version 3.16 or newer.
+- Google Test for building and running tests.
+- To plot graphs, install the dependencies written in requirements.txt:
 
-### Запуск тестов
+### Running the Application
 
-```bash
-ctest --test-dir build --output-on-failure
-```
+The application executable is located at `build/cache_app`.
 
-### Очистка
+## Benchmarks
 
-Чтобы удалить скомпилированные файлы:
+### Results
 
-```bash
-cmake --build build --target clean
-```
+- `benchmarks/benchmarks.csv` — measurement results.
+- `benchmarks/plots/` — directory containing generated plots.
 
-Чтобы полностью удалить каталог сборки вместе с конфигурацией CMake:
+## Running the Simulator
 
-```bash
-rm -rf build
-```
-
-## Бенчмарки
-
-### Запуск
-
-```bash
-cmake --build build --target benchmarks
-```
-
-Эта команда запускает бенчмарк, сохраняет результаты в `benchmarks/benchmarks.csv` и строит графики с помощью `benchmarks/plot_benchmarks.py`.
-
-### Python-зависимости
-
-Для построения графиков активируй виртуальное окружение и установи Matplotlib:
-
-```bash
-source .venv/bin/activate
-python -m pip install matplotlib
-```
-
-Если виртуальное окружение ещё не создано:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install matplotlib
-```
-
-### Результаты
-
-- `benchmarks/benchmarks.csv` — результаты измерений.
-- `benchmarks/plots/` — каталог с построенными графиками.
-
-## Запуск симулятора
-
-По умолчанию программа использует файл:
+By default, the program uses the file:
 
     txt/input.txt
 
-Запуск:
+You can also provide a custom input file:
 
-    ./build/cache
+## Input File Format
 
-Также можно передать собственный входной файл:
+The first line contains the number of cache levels.
 
-    ./build/cache path/to/input.txt
-
-## Формат входного файла
-
-Первая строка содержит количество уровней кеша.
-
-Затем для каждого уровня указывается алгоритм и размер кеша:
+Then, for each level, the algorithm and cache size are specified:
 
     <algorithm> <capacity>
 
-После описания всех уровней идёт последовательность обращений к страницам.
+After describing all levels, the sequence of page requests follows.
 
-Пример:
+Example:
 
     3
     lru 10
@@ -162,73 +72,17 @@ python -m pip install matplotlib
     lirs 30
     1 2 3 4 5 1 2 6 7 1 8 9 2 3
 
-В данном примере создаётся трёхуровневый кеш:
+In this example, a three-level cache is created:
 
     L1: LRU  — capacity 10
     L2: ARC  — capacity 20
     L3: LIRS — capacity 30
 
-Поддерживаемые алгоритмы:
+The cache capacity must be positive.
 
-    lru
-    lfu
-    2q
-    arc
-    lirs
+## Multi-level Cache
 
-Размер кеша должен быть положительным.
-
-## Архитектура
-
-Все алгоритмы кеширования реализуют общий интерфейс:
-
-    cache_interface<KeyT, ValueT>
-
-Интерфейс предоставляет основные операции:
-
-    lookup()
-    insert()
-    erase()
-    print_cache()
-
-Многоуровневый кеш реализован в классе:
-
-    multi_cache_t
-
-Благодаря общему интерфейсу `multi_cache_t` не зависит от конкретного алгоритма кеширования.
-
-Общая структура:
-
-                 multi_cache_t
-                       |
-          +------------+------------+
-          |            |            |
-         L1           L2           L3
-          |            |            |
-        LRU          ARC          LIRS
-
-Каждый уровень может использовать собственный алгоритм кеширования.
-
-## Одноуровневый кеш
-
-В одноуровневом кеше используется один экземпляр выбранного алгоритма.
-
-Например:
-
-    LRU
-     |
-     v
-    cache
-
-Для каждого обращения проверяется наличие страницы в кеше.
-
-При попадании увеличивается счётчик `Hits`.
-
-При промахе страница загружается из медленной памяти и помещается в кеш.
-
-## Многоуровневый кеш
-
-В многоуровневом кеше запрос последовательно проверяет уровни:
+In a multi-level cache, a request checks the levels sequentially:
 
     request
        |
@@ -247,102 +101,112 @@ python -m pip install matplotlib
        v
     slow memory
 
-Если страница не найдена ни на одном уровне, она загружается из медленной памяти.
+If a page is not found at any level, it is loaded from slow memory.
 
-Проект поддерживает два способа организации многоуровневого кеша:
+The project supports two ways to organize a multi-level cache:
 
 - Exclusive
 - Inclusive
 
 ## Exclusive
 
-В режиме **Exclusive** одна страница физически находится только на одном уровне кеша.
+In **Exclusive** mode, a page physically resides on only one cache level at a time.
 
-Например:
+For example:
 
     L1: [1 2 3]
     L2: [4 5 6]
     L3: [7 8 9]
 
-Если страница `5` найдена в L2, она перемещается в L1:
+If page `5` is found in L2, it is moved to L1:
 
     L2 → L1
 
-Если при вставке в L1 происходит вытеснение страницы, она передаётся на следующий уровень:
+If an eviction occurs during insertion into L1, the evicted page is passed down to the next level:
 
     L1 → L2 → L3
 
-Таким образом, одна страница не хранится одновременно на нескольких уровнях.
+Thus, a single page is not stored simultaneously on multiple levels.
 
-Преимущество такого подхода заключается в том, что суммарная ёмкость уровней используется без дублирования страниц.
+The advantage of this approach is that the total capacity of the levels is utilized without duplicating pages.
 
 ## Inclusive
 
-В режиме **Inclusive** нижние уровни содержат копии страниц верхних уровней.
+In **Inclusive** mode, lower levels contain copies of pages from upper levels.
 
-Для трёх уровней выполняется инвариант:
+For three levels, the invariant holds:
 
     L1 ⊆ L2 ⊆ L3
 
-Например:
+For example:
 
     L1: [1 2]
     L2: [1 2 3 4]
     L3: [1 2 3 4 5 6]
 
-Если страница найдена на нижнем уровне, она может быть добавлена в верхние уровни.
+If a page is found at a lower level, it may be promoted to upper levels.
 
-Если страница вытесняется из нижнего уровня, соответствующие копии этой страницы в верхних уровнях удаляются.
+If a page is evicted from a lower level, the corresponding copies of this page in upper levels are removed.
 
-## Алгоритмы кеширования
+## Cache Algorithms
 
 ### LRU
 
 **Least Recently Used**
 
-Вытесняет страницу, которая дольше всего не использовалась.
+Evicts the page that has not been used for the longest time.
+
+https://dev.to/abdullahyasir/understanding-lru-cache-efficient-data-storage-and-retrieval-2jnc
 
 ### LFU
 
 **Least Frequently Used**
 
-Вытесняет страницу с наименьшей частотой обращений.
+Evicts the page with the lowest access frequency.
+
+https://www.geeksforgeeks.org/dsa/least-frequently-used-lfu-cache-implementation/
 
 ### 2Q
 
 **Two Queues**
 
-Использует несколько очередей для разделения недавно добавленных и часто используемых страниц.
+Uses multiple queues to separate recently added pages from frequently used pages.
+
+https://arpitbhayani.me/blogs/2q-cache/
+
+https://www.vldb.org/conf/1994/P439.PDF
 
 ### ARC
 
 **Adaptive Replacement Cache**
 
-Адаптивно балансирует между недавно использовавшимися и часто использовавшимися страницами.
+Adaptively balances between recently used and frequently used pages.
 
-В реализации используются структуры:
+https://www.mydreams.cz/en/hosting-wiki/11161-arc-cache-advanced-memory-management-in-zfs.html
 
-    T1
-    T2
-    B1
-    B2
+https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
+
 
 ### LIRS
 
 **Low Inter-reference Recency Set**
 
-Использует информацию о расстоянии между обращениями к страницам для определения того, какие страницы следует сохранять в кеше.
+https://ranger.uta.edu/~sjiang/pubs/papers/jiang02_LIRS.pdf
 
-## Статистика
+https://redis.io/glossary/lru-cache/
 
-Для каждого уровня ведётся отдельная статистика.
+Uses information about the distance between page accesses to determine which pages should be retained in the cache.
 
-Подсчитываются:
+## Statistics
 
-- `Hits` — количество попаданий;
-- `Misses` — количество промахов.
+Separate statistics are maintained for each level.
 
-Пример:
+The following are counted:
+
+- `Hits` — number of hits;
+- `Misses` — number of misses.
+
+Example:
 
     L1:
         Hits: 120
@@ -356,30 +220,30 @@ python -m pip install matplotlib
         Hits: 10
         Misses: 20
 
-Также можно вывести текущее содержимое уровней кеша.
+You can also print the current contents of the cache levels.
 
-## Медленная память
+## Slow Memory
 
-Если запрашиваемая страница отсутствует во всех уровнях кеша, она загружается из медленной памяти.
+If the requested page is missing from all cache levels, it is loaded from slow memory.
 
-Медленная память моделируется внутри `multi_cache_t`.
+Slow memory is modeled inside `multi_cache_t`.
 
-Для каждой страницы сохраняется соответствующее значение, поэтому повторные обращения к одной странице получают то же значение.
+A corresponding value is stored for each page, ensuring that repeated requests to the same page receive the same value.
 
-## Бенчмарки
+## Benchmarks
 
-Для исследования производительности реализована отдельная система бенчмарков.
+A dedicated benchmarking system is implemented for performance research.
 
-Рассматриваются:
+Considered scenarios:
 
-- одноуровневые кеши;
-- двухуровневые кеши;
-- трёхуровневые кеши;
-- Exclusive организация;
-- Inclusive организация;
-- различные комбинации алгоритмов на уровнях.
+- Single-level caches;
+- Two-level caches;
+- Three-level caches;
+- Exclusive organization;
+- Inclusive organization;
+- Various combinations of algorithms across levels.
 
-Используются следующие рабочие нагрузки:
+The following workloads are used:
 
     LOOP
     SCAN
@@ -388,61 +252,58 @@ python -m pip install matplotlib
     MIXED
     RANDOM
 
-CSV содержит информацию о:
+The CSV contains information about:
 
-- конфигурации кеша;
-- алгоритмах на уровнях;
-- режиме организации;
-- количестве попаданий;
-- отношении попаданий;
-- результате Belady;
-- эффективности;
-- количестве попаданий на каждом уровне.
+- Cache configuration;
+- Algorithms at each level;
+- Organization mode;
+- Number of hits;
+- Hit ratio;
+- Belady result;
+- Efficiency;
+- Number of hits at each level.
 
-## Результаты исследования
+## Research Results
 
-### Методика эксперимента
+### Experimental Methodology
 
-Для оценки алгоритмов кеширования были проведены эксперименты с пятью алгоритмами: **LRU, LFU, 2Q, ARC и LIRS**.
+To evaluate cache algorithms, experiments were conducted with the algorithms listed above.
 
-Исследование проводилось для одноуровневых кешей, а также для двух- и трёхуровневых конфигураций. Для многоуровневых кешей рассматривались две схемы организации:
+The study was performed for single-level caches, as well as two- and three-level configurations. For multi-level caches, Exclusive and Inclusive organization schemes were considered.
 
-- **Inclusive** — страница может одновременно находиться на нескольких уровнях;
-- **Exclusive** — одна страница физически хранится только на одном уровне.
+### Workloads
 
-### Нагрузки
+For each workload type, **5,000 requests** are generated. Generator parameters are fixed, making the results reproducible.
 
-Для каждого типа нагрузки генерируется **5000 обращений**. Параметры генераторов фиксированы, поэтому результаты можно воспроизводить.
-
-| Нагрузка | Параметры | Описание |
+| Workload | Parameters | Description |
 |---|---|---|
-| `LOOP` | 5000 обращений, рабочий набор — **35 страниц** | Последовательное циклическое обращение к страницам `0..34`. Рабочий набор немного больше суммарной емкости кэшей, поэтому нагрузка хорошо показывает поведение алгоритмов при циклическом вытеснении |
-| `SCAN` | 5000 обращений, **5000 различных страниц** | Каждая страница запрашивается один раз последовательно: `0, 1, 2, ...`. Повторных обращений нет |
-| `HOT_COLD` | **15 горячих** + **500 холодных** страниц, вероятность горячей страницы — **85%** | 85% обращений приходится на небольшой набор часто используемых страниц, остальные 15% — на большой набор редко используемых страниц |
-| `WORKING_SET` | рабочий набор — **25 страниц**, сдвиг каждые **250 обращений** | В каждый момент времени активно около 25 страниц. После каждых 250 обращений рабочий набор сдвигается на 12 страниц |
-| `MIXED` | блоки по **100 обращений**, 3 типа фаз | Чередование циклической нагрузки на 15 страниц, преимущественно горячих обращений к диапазону до 100 страниц и случайных обращений к диапазону до 300 страниц |
-| `RANDOM` | **5000 обращений**, диапазон — **150 страниц**, seed = **42** | Равномерно случайная последовательность обращений к 150 страницам |
+| `LOOP` | 5,000 requests, working set — **35 pages** | Sequential cyclic access to pages `0..34`. The working set is slightly larger than the total cache capacity, so the workload clearly demonstrates algorithm behavior under cyclic eviction. |
+| `SCAN` | 5,000 requests, **5,000 unique pages** | Each page is requested once sequentially: `0, 1, 2, ...`. There are no repeated requests. |
+| `HOT_COLD` | **15 hot** + **500 cold** pages, hot page probability — **85%** | 85% of requests target a small set of frequently used pages, while the remaining 15% target a large set of rarely used pages. |
+| `WORKING_SET` | working set — **25 pages**, shift every **250 requests** | Approximately 25 pages are active at any given time. After every 250 requests, the working set shifts by 12 pages. |
+| `MIXED` | blocks of **100 requests**, 3 phase types | Alternating cyclic load of 15 pages, predominantly hot accesses to a range of up to 100 pages, and random accesses to a range of up to 300 pages. |
+| `RANDOM` | **5,000 requests**, range — **150 pages**, seed = **42** | Uniformly random sequence of requests to 150 pages. |
 
-Для всех многоуровневых конфигураций используются размеры:
+For all multi-level configurations, the following sizes are used:
 
-- **L1 = 10 страниц**
-- **L2 = 20 страниц**
-- **L3 = 30 страниц**
+- **L1 = 10 pages**
+- **L2 = 20 pages**
+- **L3 = 30 pages**
 
-Для одноуровневых кэшей используется емкость **30 страниц**.
-В качестве эталона использовался оптимальный алгоритм **Belady**. Основными метриками являлись:
+For single-level caches, a capacity of **30 pages** is used.
+The optimal **Belady** algorithm was used as a baseline. The main metrics were:
 
-- `Hits` — общее количество попаданий;
-- `Hit_Ratio_Pct` — доля попаданий;
-- `Ideal_Hits` — количество попаданий оптимального кеша Belady;
-- `Efficiency_Pct` — эффективность относительно Belady;
-- `L1_Hits`, `L2_Hits`, `L3_Hits` — количество попаданий на каждом уровне.
+- `Hits` — total number of hits;
+- `Hit_Ratio_Pct` — hit ratio percentage;
+- `Ideal_Hits` — number of hits by the optimal Belady cache;
+- `Efficiency_Pct` — efficiency relative to Belady;
+- `L1_Hits`, `L2_Hits`, `L3_Hits` — number of hits at each level.
 
-Для многоуровневого кеша дополнительно анализировалось распределение попаданий между уровнями. Это позволяет оценить не только количество попаданий, но и то, на каком уровне они происходят.
+For multi-level caches, the distribution of hits across levels was additionally analyzed. This makes it possible to evaluate not only the total number of hits, but also the specific level at which they occur.
 
-### Рейтинг многоуровневых конфигураций
+### Multi-level Configuration Ranking
 
-Наиболее наглядным показателем для сравнения конфигураций является суммарная эффективность относительно Belady. Ниже приведены десять лучших двух- и трёхуровневых конфигураций для каждой схемы организации кеша.
+The most intuitive indicator for comparing configurations is total efficiency relative to Belady. Below are the top ten two- and three-level configurations for each cache organization scheme, based on the average number of hits across all workload variants.
 
 ![Top 10 two-level Exclusive](benchmarks/plots/top_10_2_level_exclusive.png)
 
@@ -452,11 +313,11 @@ CSV содержит информацию о:
 
 ![Top 10 three-level Inclusive](benchmarks/plots/top_10_3_level_inclusive.png)
 
-На графиках каждый столбец разбит на сегменты L1, L2 и L3. Таким образом, высота столбца показывает суммарный вклад конфигурации относительно Belady, а отдельные сегменты показывают, где именно были получены попадания.
+In the charts, each bar is broken down into L1, L2, and L3 segments. Thus, the height of the bar shows the configuration's total contribution relative to Belady, while the individual segments show where exactly the hits were obtained.
 
-### Все конфигурации
+### All Configurations
 
-Для анализа влияния конкретного алгоритма и его положения в иерархии были также построены графики для всех исследованных конфигураций.
+To analyze the impact of a specific algorithm and its position in the hierarchy, plots were also generated for all studied configurations.
 
 ![All two-level Exclusive](benchmarks/plots/all_2_level_exclusive.png)
 
@@ -466,64 +327,58 @@ CSV содержит информацию о:
 
 ![All three-level Inclusive](benchmarks/plots/all_3_level_inclusive.png)
 
-Эти графики позволяют сравнить не только лидирующие конфигурации, но и весь набор комбинаций алгоритмов.
+These charts allow comparison not only of the leading configurations, but of the entire set of algorithm combinations.
 
-### Одноуровневые кеши
-
-Для одноуровневых кешей сравнивались пять алгоритмов: LRU, 2Q, LFU, LIRS и ARC.
+### Single-Level Caches
 
 ![Single cache comparison](benchmarks/plots/single_cache_comparison.png)
 
-Результаты показывают, что эффективность алгоритмов существенно зависит от характера нагрузки.
+The results show that algorithm efficiency depends heavily on the nature of the workload.
 
-На `WORKING_SET` лучшим оказался **LRU**: он получил 4720 попаданий при 4747 попаданиях Belady, то есть 99,43% от оптимального результата. ARC и 2Q также показали близкий результат — 99,28% и 99,22% соответственно.
+On `WORKING_SET`, **LRU** proved to be the best: it achieved 4,720 hits compared to 4,747 hits for Belady, i.e., 99.43% of the optimal result. ARC and 2Q also showed close results — 99.28% and 99.22% respectively.
 
-На `HOT_COLD` лидировали **LFU и LIRS** — по 4289 попаданий, или 97,32% от результата Belady.
+On `HOT_COLD`, **LFU and LIRS** led with 4,289 hits each, or 97.32% of Belady's result.
 
-На `MIXED` лучшим оказался **2Q** с 3453 попаданиями и эффективностью 89,62%. Это соответствует назначению алгоритма: 2Q разделяет недавно поступившие страницы и страницы, для которых уже было обнаружено повторное использование.
+On `MIXED`, **2Q** was the best with 3,453 hits and an efficiency of 89.62%. This matches the algorithm's design: 2Q separates newly arrived pages from pages for which reuse has already been detected.
 
-На `RANDOM` лучшим среди одноуровневых алгоритмов оказался **LIRS** — 1202 попадания и 46,27% от результата Belady.
+On `RANDOM`, **LIRS** performed best among single-level algorithms with 1,202 hits and 46.27% of Belady's result.
 
-Особенно заметен результат на `LOOP`: LIRS получил 4118 попаданий и 97,24% от Belady, тогда как LRU, 2Q и LFU в данном эксперименте не получили попаданий, а ARC получил только 15.
+The result on `LOOP` is particularly notable: LIRS achieved 4,118 hits and 97.24% of Belady's, whereas LRU, 2Q, and LFU received zero hits in this experiment, and ARC received only 15.
 
-Таким образом, одноуровневый эксперимент не выявляет единственного универсального алгоритма. Результат определяется характером локальности обращений.
+Thus, a single-level experiment does not reveal a single universal algorithm. The result is determined by the nature of locality in access patterns.
 
-### Inclusive и Exclusive
+### Inclusive and Exclusive
 
-Одним из основных результатов исследования стало сравнение двух способов организации многоуровневого кеша.
+One of the main findings of the research was the comparison of two multi-level cache organization methods.
 
-В **Inclusive**-схеме одна и та же страница может присутствовать сразу на нескольких уровнях. Это упрощает поддержание содержимого и позволяет сохранять копию страницы на верхнем уровне, однако часть общей ёмкости кеша расходуется на дублирование.
+In the conducted experiments, the advantage of Exclusive manifested particularly well on `WORKING_SET` and `RANDOM`.
 
-В **Exclusive**-схеме страницы не дублируются между уровнями. При вытеснении из L1 страница перемещается на следующий уровень. Поэтому суммарная ёмкость всех уровней используется для хранения большего количества различных страниц.
+For example, for `WORKING_SET`, the `LIRS+LFU` configuration in Exclusive mode achieved 4,747 hits — exactly matching the Belady baseline. Several other Exclusive configurations showed similar results.
 
-В проведённых экспериментах преимущество Exclusive особенно хорошо проявилось на `WORKING_SET` и `RANDOM`.
+On `RANDOM`, the advantage of using multiple levels is especially noticeable. The `LIRS+LIRS+LIRS` configuration in Exclusive mode gets significantly more hits than the corresponding Inclusive configuration. In this case, lower levels make it possible to retain pages that did not fit into L1.
 
-Например, для `WORKING_SET` конфигурация `LIRS+LFU` в Exclusive-режиме получила 4747 попаданий — столько же, сколько эталон Belady. Аналогичный результат показали несколько других Exclusive-конфигураций.
+However, Exclusive is not unconditionally the best mode for every individual workload. On `HOT_COLD`, some Inclusive configurations show results comparable to the best Exclusive configurations. Therefore, the choice of scheme also depends on the nature of access patterns.
 
-На `RANDOM` особенно заметно преимущество использования нескольких уровней. Конфигурация `LIRS+LIRS+LIRS` в Exclusive-режиме получает значительно больше попаданий, чем соответствующая Inclusive-конфигурация. В этом случае нижние уровни позволяют сохранить страницы, которые не поместились в L1.
+### Role of Algorithms in the Hierarchy
 
-Однако Exclusive не является безусловно лучшим режимом для каждой отдельной нагрузки. На `HOT_COLD` некоторые Inclusive-конфигурации показывают результаты, сопоставимые с лучшими Exclusive-конфигурациями. Поэтому выбор схемы также зависит от характера обращений.
+The results of three-level experiments show that not only the choice of algorithm matters, but also **its position in the hierarchy**.
 
-### Роль алгоритмов в иерархии
+L1 is responsible for the fastest hits, so the algorithm at this level directly affects the number of requests served at minimal cost.
 
-Результаты трёхуровневых экспериментов показывают, что значение имеет не только выбор алгоритма, но и **его положение в иерархии**.
+L2 and L3 make it possible to retain pages evicted from upper levels. The role of lower levels is especially prominent with large working sets and random accesses.
 
-L1 отвечает за наиболее быстрые попадания, поэтому алгоритм на этом уровне непосредственно влияет на количество обращений, обслуженных с минимальной стоимостью.
+For example, in the `LIRS+LIRS+LIRS` configuration for `RANDOM`, a significant portion of hits comes not from L1, but from L2 and L3. This means that even if a page was not retained in the fastest cache, the hierarchy still allows finding it significantly faster than by accessing slow memory.
 
-L2 и L3 позволяют сохранить страницы, которые были вытеснены из верхних уровней. Особенно заметна роль нижних уровней при больших рабочих наборах и случайных обращениях.
+Therefore, for a multi-level system, evaluating only the overall `Hit Ratio` is insufficient: the distribution of hits across levels must be taken into account.
 
-Например, в конфигурации `LIRS+LIRS+LIRS` для `RANDOM` значительная часть попаданий приходится не на L1, а на L2 и L3. Это означает, что даже если страница не была сохранена в самом быстром кеше, иерархия всё равно позволяет найти её значительно раньше, чем при обращении к медленной памяти.
+### Conclusion
 
-Поэтому для многоуровневой системы недостаточно оценивать только общий `Hit Ratio`: необходимо учитывать распределение попаданий между уровнями.
+The conducted research shows that **there is no universal caching algorithm that provides the best result across all types of workloads**.
 
-### Вывод
+For a stable working set, LRU works well: on `WORKING_SET`, it almost reaches Belady's result. LFU effectively utilizes access frequency information and shows good results on `HOT_COLD`, but can perform significantly worse when the working set changes. 2Q handles mixed workloads well because it distinguishes between one-time and repeated accesses. LIRS showed the strongest results on complex sequences and random workloads. ARC in most cases demonstrates stable performance and is able to adapt to changing access patterns.
 
-Проведённое исследование показывает, что **универсального алгоритма кеширования, обеспечивающего лучший результат на всех типах нагрузок, нет**.
+For a multi-level cache, data organization becomes a critical factor. **Exclusive** allows more efficient use of the total capacity of levels due to the absence of page duplication. This advantage is especially noticeable on `WORKING_SET` and `RANDOM` workloads, where additional levels allow significantly more distinct pages to be retained.
 
-Для стабильного рабочего набора хорошо подходит LRU: на `WORKING_SET` он практически достигает результата Belady. LFU эффективно использует информацию о частоте обращений и показывает хорошие результаты на `HOT_COLD`, однако может существенно проигрывать при изменении рабочего набора. 2Q хорошо работает со смешанными нагрузками, поскольку различает одноразовые и повторные обращения. LIRS показал наиболее сильные результаты на сложных последовательностях и случайной нагрузке. ARC в большинстве случаев демонстрирует стабильный результат и способен адаптироваться к изменению характера обращений.
+At the same time, the optimal configuration depends on the nature of the workload. The results show that algorithms cannot be viewed independently of the cache level: the same strategy can yield different results in L1, L2, and L3.
 
-Для многоуровневого кеша существенным фактором становится организация данных. **Exclusive** позволяет эффективнее использовать суммарную ёмкость уровней за счёт отсутствия дублирования страниц. Особенно заметно это преимущество на нагрузках `WORKING_SET` и `RANDOM`, где дополнительные уровни позволяют сохранить значительно больше различных страниц.
-
-При этом оптимальная конфигурация зависит от характера рабочей нагрузки. Результаты показывают, что алгоритмы нельзя рассматривать независимо от уровня кеша: одна и та же стратегия может давать разные результаты в L1, L2 и L3.
-
-Таким образом, эксперимент подтверждает, что эффективность кеширования определяется сочетанием **алгоритма вытеснения, структуры рабочей нагрузки и архитектуры многоуровневого кеша**. Для практической системы выбор конфигурации должен учитывать не только общее количество попаданий, но и распределение попаданий между уровнями.
+Thus, the experiment confirms that caching efficiency is determined by a combination of the **eviction algorithm, workload structure, and multi-level cache architecture**. For a practical system, configuration selection must account for not only the total number of hits, but also the distribution of hits across levels.

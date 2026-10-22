@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lirs_cache_t : public cache_interface<KeyT, ValueT> {
 private:
     size_t capacity_;
@@ -49,13 +49,13 @@ private:
 
 public:
     explicit lirs_cache_t(size_t capacity) : capacity_(capacity), lir_cap_(capacity > 1 ? capacity - 1 : 1) {}
-    bool lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
         if (hit != hash_.end() && hit->second.status != HIR_NON_RES) {
             BlockInfo& info = hit->second;
-            value = info.value;
+
             if (info.status == LIR) {
                 S_.splice(S_.begin(), S_, info.stack_it);
                 prune_stack();
@@ -87,10 +87,10 @@ public:
                     info.q_it = Q_.begin();
                 }
             }
-            return true;
+            return info.value;
         }
         else {
-            return false;
+            return std::nullopt;
         }
 
     }
@@ -223,28 +223,26 @@ public:
 
         hash_.erase(it);
     }
-    void print_cache() const override {
-        std::cout << "S:\n";
+    void print_cache(std::ostream& os = std::cout) const override  {
+        os << "S:\n";
 
         for (const auto& key : S_) {
             auto it = hash_.find(key);
 
             if (it != hash_.end()) {
-                std::cout << "    "
-                          << key << " -> "
-                          << it->second.value << '\n';
+                os << "    " << key << " -> "
+                             << it->second.value << '\n';
             }
         }
 
-        std::cout << "Q:\n";
+        os << "Q:\n";
 
         for (const auto& key : Q_) {
             auto it = hash_.find(key);
 
             if (it != hash_.end()) {
-                std::cout << "    "
-                          << key << " -> "
-                          << it->second.value << '\n';
+                os << "    " << key << " -> "
+                             << it->second.value << '\n';
             }
         }
     }

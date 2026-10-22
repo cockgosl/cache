@@ -9,10 +9,10 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class two_q_cache_t : public cache_interface<KeyT, ValueT>{
 private:
-    size_t capacity_; // capacity 
+    size_t capacity_; // capacity
     size_t kin_;      // the limit of FIFO
 
     struct Node {
@@ -30,12 +30,12 @@ private:
 
 public:
     explicit two_q_cache_t(size_t capacity) : capacity_(capacity), kin_(capacity / 4 + 1) {}
-    bool lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         // CACHE HIT
         if (hit != hash_.end()) {
-            value = hit->second.first->value;
+
             // if in LRU main_, refresh it's condition'
             if (hit->second.second) {
                 main_.splice(main_.begin(), main_, hit->second.first);
@@ -45,10 +45,10 @@ public:
                 main_.splice(main_.begin(), in_, hit->second.first);
                 hit->second.second = true;
             }
-            return true;
+            return hit->second.first->value;
         }
         else {
-            return false;
+            return std::nullopt;
         }
     }
     std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
@@ -106,21 +106,19 @@ public:
 
        hash_.erase(it);
     }
-    void print_cache() const override {
-        std::cout << "IN:\n";
+    void print_cache(std::ostream& os = std::cout) const override  {
+        os << "IN:\n";
 
         for (const auto& node : in_) {
-            std::cout << "    "
-                      << node.key << " -> "
-                      << node.value << '\n';
+            os << "    " << node.key << " -> "
+                         << node.value << '\n';
         }
 
-        std::cout << "MAIN:\n";
+        os << "MAIN:\n";
 
         for (const auto& node : main_) {
-            std::cout << "    "
-                      << node.key << " -> "
-                      << node.value << '\n';
+            os << "    " << node.key << " -> "
+                         << node.value << '\n';
         }
     }
 };

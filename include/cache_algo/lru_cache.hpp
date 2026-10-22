@@ -10,33 +10,32 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lru_cache_t : public cache_interface<KeyT, ValueT> {
 private:
-    size_t capacity_;                        
+    size_t capacity_;
 
     struct Node {
         KeyT key;
         ValueT value;
     };
-    std::list<Node> cache_;                  
-    using ListIt = typename std::list<Node>::iterator; 
-    std::unordered_map<KeyT , ListIt> hash_; 
+    std::list<Node> cache_;
+    using ListIt = typename std::list<Node>::iterator;
+    std::unordered_map<KeyT , ListIt> hash_;
 
 public:
     explicit lru_cache_t(size_t capacity) : capacity_(capacity) {}
 
-    bool lookup(const KeyT& key, ValueT& value) override {
+   std::optional<ValueT> lookup(const KeyT& key) override {
         auto it = hash_.find(key);
 
         if (it == hash_.end()) {
-            return false;
+            return std::nullopt;
         }
 
         cache_.splice(cache_.begin(), cache_, it->second);
 
-        value = it->second->value;
-        return true;
+        return it->second->value;
     }
     std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
         auto it = hash_.find(key);
@@ -46,7 +45,7 @@ public:
             return std::nullopt;
         }
 
-        // add new element in the begining  
+        // add new element in the begining
         cache_.push_front({key, value});
 
         // put it in hash_
@@ -76,9 +75,9 @@ public:
         hash_.erase(it);
     }
 
-    void print_cache() const override {
+    void print_cache(std::ostream& os = std::cout) const override {
         for (const auto& node : cache_) {
-            std::cout << node.key << " -> " << node.value << '\n';
+            os << node.key << " -> " << node.value << '\n';
         }
     }
 };

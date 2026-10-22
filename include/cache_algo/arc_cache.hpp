@@ -11,10 +11,10 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class arc_cache_t : public cache_interface<KeyT, ValueT> {
 private:
-    size_t c_; // capacity 
+    size_t c_; // capacity
     size_t p_; // dynamic parameter
 
     struct Node {
@@ -57,12 +57,12 @@ private:
 public:
     explicit arc_cache_t(size_t capacity) : c_(capacity), p_(0) {}
 
-    bool lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = hash_.find(key);
 
         if (hit != hash_.end() && (hit->second.second == '1' || hit->second.second == '2')) {
             auto node_it = std::get<TListIt>(hit->second.first);
-            value = node_it->value;
+
 
             if (hit->second.second == '1') {
                 t2_.splice(t2_.begin(), t1_, node_it);
@@ -72,9 +72,9 @@ public:
             }
 
             hash_[key] = {t2_.begin(), '2'};
-            return true;
+            return node_it->value;
         }
-        return false;
+        return std::nullopt;
     }
 
     std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
@@ -142,7 +142,7 @@ public:
                 victim = replace(false);
             }
             else {
-                victim = replace(false);    
+                victim = replace(false);
             }
         }
         else {
@@ -189,22 +189,22 @@ public:
         hash_.erase(it);
     }
 
-    void print_cache() const override {
-        std::cout << "T1:\n";
+    void print_cache(std::ostream& os = std::cout) const override {
+        os << "T1:\n";
         for (const auto& node : t1_) {
-            std::cout << "    " << node.key << " -> " << node.value << '\n';
+            os << "    " << node.key << " -> " << node.value << '\n';
         }
-        std::cout << "T2:\n";
+        os << "T2:\n";
         for (const auto& node : t2_) {
-            std::cout << "    " << node.key << " -> " << node.value << '\n';
+            os << "    " << node.key << " -> " << node.value << '\n';
         }
-        std::cout << "B1:\n";
+        os << "B1:\n";
         for (const auto& key : b1_) {
-            std::cout << "    " << key << '\n';
+            os << "    " << key << '\n';
         }
-        std::cout << "B2:\n";
+        os << "B2:\n";
         for (const auto& key : b2_) {
-            std::cout << "    " << key << '\n';
+            os << "    " << key << '\n';
         }
     }
 };

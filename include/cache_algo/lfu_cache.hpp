@@ -9,7 +9,7 @@
 
 #include "interface/cache_interface.hpp"
 
-template <typename KeyT = int, typename ValueT = int>
+template <typename KeyT, typename ValueT>
 class lfu_cache_t : public cache_interface<KeyT, ValueT> {
 private:
     size_t capacity_;  // capacity
@@ -22,19 +22,20 @@ private:
     };
 
     using ListIt = typename std::list<Node>::iterator;
-    std::unordered_map<KeyT, ListIt> key_map_;            
+
+    std::unordered_map<KeyT, ListIt> key_map_;
     std::unordered_map<size_t, std::list<Node>> freq_map_; // frequency -> list of nodes with this frequency
 
 public:
     explicit lfu_cache_t(size_t capacity) : capacity_(capacity), min_freq_(0) {}
 
-    bool lookup(const KeyT& key, ValueT& value) override {
+    std::optional<ValueT> lookup(const KeyT& key) override {
         auto hit = key_map_.find(key);
 
         // CACHE HIT
         if (hit != key_map_.end()) {
             auto node_it = hit->second;
-            value = node_it->value;
+            ValueT value = node_it->value; // Сохраняем значение заранее
             size_t freq = node_it->freq;
 
             // delete the element from this frequency group
@@ -50,12 +51,13 @@ public:
             freq_map_[freq + 1].push_front({key, value, freq + 1});
             key_map_[key] = freq_map_[freq + 1].begin();
 
-            return true;
+            return value;
         }
         else {
-            return false;
+            return std::nullopt;
         }
     }
+
     std::optional<std::pair<KeyT, ValueT>> insert(const KeyT& key, const ValueT& value) override {
         auto it = key_map_.find(key);
         if (it != key_map_.end()) {
@@ -109,15 +111,14 @@ public:
             }
         }
     }
-    void print_cache() const override {
+    void print_cache(std::ostream& os = std::cout) const override {
 
         for (const auto& [freq, list] : freq_map_) {
-            std::cout << "freq " << freq << ":\n";
+            os << "freq " << freq << ":\n";
 
             for (const auto& node : list) {
-                std::cout << "    "
-                        << node.key << " -> "
-                        << node.value << '\n';
+                os << "    " << node.key << " -> "
+                             << node.value << '\n';
             }
         }
     }
